@@ -71,3 +71,9 @@ class EventsCog(commands.Cog):
         pass
 
     #Figure out how to do talk with user in private dm. #ON BILBO TO DO
+    #SYNCED MESSAGE member.waitformessage ? maybe ? wait only for 3 minutes if no repsonse close funciton 
+    #on private message recieved do : 
+    # get the message ( first it contains the name of the event ) and send a description request
+    # recieve description send icon request
+    # recieve icon send date request
+    # say thanks and create event and embed it.
