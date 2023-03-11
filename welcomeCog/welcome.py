@@ -74,8 +74,8 @@ class WelcomeCog(commands.Cog):
                 self.message = await WelcomeCog.fetchMessage()
             message = WelcomeCog.formatMessage(self.message)
             await ctx.send(content=None, embed=message)
-        except ():
-            print(f'Error Occured!')
+        except Exception as e:
+            print(f'Error occurred while previewing the welcome message: {e}')
 
     @commands.command(name='dmWelcomeMessage', case_insensitive=True, description='Sends')
     @commands.has_any_role(*access_roles)
@@ -88,8 +88,8 @@ class WelcomeCog(commands.Cog):
                 self.message = await WelcomeCog.fetchMessage()
             message = WelcomeCog.formatMessage(self.message)
             await ctx.author.send(content=None, embed=message)
-        except ():
-            print(f'Error Occured!')
+        except Exception as e:
+            print(f'Error occurred while previewing the welcome message: {e}')
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:
