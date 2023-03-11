@@ -8,6 +8,7 @@ url = 'https://raw.githubusercontent.com/Kanium/KaniumCogs/master/welcomeCog/dat
 
 allowed_guilds = {274657393936302080, 693796372092289024, 508781789737648138}
 admin_roles = {'Developer', 'admin', 'Council'}
+access_roles = {'HasAcceptedKaniumTerms'}
 
 
 class WelcomeCog(commands.Cog):
@@ -15,6 +16,7 @@ class WelcomeCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.message: str = ''
+        self.active = True
 
     @staticmethod
     async def fetchMessage():
@@ -33,7 +35,7 @@ class WelcomeCog(commands.Cog):
                 map(str, jsonFormat['description'])), color=int(jsonFormat['color'], 16))
             message.set_thumbnail(url=jsonFormat['thumbnail'])
             for field in jsonFormat['fields']:
-                if(field['id'] != 'links'):
+                if (field['id'] != 'links'):
                     message.add_field(
                         name=field['name'], value=field['value'], inline=field['inline'])
                 else:
@@ -72,12 +74,28 @@ class WelcomeCog(commands.Cog):
                 self.message = await WelcomeCog.fetchMessage()
             message = WelcomeCog.formatMessage(self.message)
             await ctx.send(content=None, embed=message)
-        except():
-            print(f'Error Occured!')
+        except Exception as e:
+            print(f'Error occurred while previewing the welcome message: {e}')
+
+    @commands.command(name='dmWelcomeMessage', case_insensitive=True, description='Sends')
+    @commands.has_any_role(*access_roles)
+    async def dmWelcomeMessage(self, ctx: commands.Context) -> None:
+        try:
+            await ctx.trigger_typing()
+            if ctx.guild.id not in allowed_guilds:
+                return
+            if self.message == '':
+                self.message = await WelcomeCog.fetchMessage()
+            message = WelcomeCog.formatMessage(self.message)
+            await ctx.author.send(content=None, embed=message)
+        except Exception as e:
+            print(f'Error occurred while previewing the welcome message: {e}')
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:
         try:
+            if not self.active:  # Check if the listener is active
+                return
             if member.guild.id not in allowed_guilds:
                 return
             if self.message == '':
@@ -87,3 +105,9 @@ class WelcomeCog(commands.Cog):
         except (discord.NotFound, discord.Forbidden):
             print(
                 f'Error Occured! sending a dm to {member.display_name} didnt work !')
+    
+    @commands.command(name='togglewelcome', case_insensitive=True, description='Toggles the welcome message listener')
+    @commands.has_any_role(*admin_roles)
+    async def toggleWelcome(self, ctx: commands.Context) -> None:
+        self.active = not self.active
+        await ctx.send(f'Welcome message listener {"activated" if self.active else "deactivated"}')
