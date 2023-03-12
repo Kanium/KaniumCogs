@@ -5,6 +5,7 @@ from copy import copy
 import contextlib
 import discord
 
+
 from redbot.core import Config, checks, commands
 from redbot.core.utils import AsyncIter
 from redbot.core.utils.chat_formatting import pagify, box
@@ -46,7 +47,7 @@ class Recruitment(commands.Cog):
         if not _application:
             # Ask the user the questions and get the answers
             questions = ["What's your name?", "What's your age?", "Why do you want to join our community?"]
-            answers = await ask_questions(author, questions)
+            answers = await ask_questions(self.bot, author, questions)
 
             # Create an embed with the application information
             application_embed = await format_application(answers, author)
@@ -73,7 +74,7 @@ async def format_application(answers: List[str], author: discord.Member) -> disc
     return embed
 
 
-async def ask_questions(author, questions):
+async def ask_questions(bot, author, questions):
     """Ask the user a list of questions and return the answers."""
     answers = []
 
@@ -81,7 +82,7 @@ async def ask_questions(author, questions):
     for question in questions:
         await author.send(question)
         # Wait for the user to respond
-        answer = await self.bot.wait_for(
+        answer = await bot.wait_for(
             "message", check=lambda m: m.author == author and m.guild is None
         )
         answers.append(answer.content)
