@@ -54,7 +54,8 @@ class Recruitment(commands.Cog):
 
     async def format_application(self, answers: List[str], author: discord.Member) -> discord.Embed:
         """Format the application answers into an embed."""
-        embed = discord.Embed(title=f"Application from {author.display_name}", color=discord.Color.green())
+        embed = discord.Embed(title=f"Application from [{author.display_name}](https://discordapp.com/users/{author.id})", color=discord.Color.green())
+        embed.set_thumbnail(url=author.avatar_url)
         embed.add_field(name="Name", value=answers[0])
         embed.add_field(name="Discord ID", value=author.id)
         embed.add_field(name="Age", value=answers[1])
