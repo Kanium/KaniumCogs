@@ -46,6 +46,7 @@ class Recruitment(commands.Cog):
         self.antispam = {}
         self.user_cache = []
         self.tunnel_store = {}
+        self.config = Config.get_conf(self, 42631423034200142, force_registration=True)
         # (guild, ticket#):
         #   {'tun': Tunnel, 'msgs': List[int]}
 
