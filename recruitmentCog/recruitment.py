@@ -16,8 +16,8 @@ class Recruitment(commands.Cog):
     def __init__(self, bot: Red):
         self.bot = bot
 
-    @commands.group(name="application", usage="[text]", invoke_without_command=True)
-    async def application(self, ctx: commands.Context, *, _application: str = ""):
+    @commands.group(name="application", description="Starts the flow to create an application for joining Kanium")
+    async def application(self, ctx: commands.Context):
         """Send an application.
 
         Use without arguments for an interactive application creation flow, or do
@@ -30,10 +30,8 @@ class Recruitment(commands.Cog):
             await ctx.send("This command can only be used in a direct message to the bot.")
             return
 
-        if not _application:
-            await self.interactive_application(author)
-        else:
-            await self.noninteractive_application(_application, author)
+        await self.interactive_application(author)
+
 
     async def interactive_application(self, author: discord.Member):
         """Ask the user several questions to create an application."""
@@ -53,16 +51,10 @@ class Recruitment(commands.Cog):
         # Send a confirmation message to the author
         await author.send("Thank you for submitting your application!")
 
-    async def noninteractive_application(self, application_text: str, author: discord.Member):
-        """Send a non-interactive application."""
-        application_channel = self.bot.get_channel(application_channel_id)
-        await application_channel.send(application_text)
-        await author.send("Thank you for submitting your application!")
-
     async def format_application(self, answers: List[str], author: discord.Member) -> discord.Embed:
         """Format the application answers into an embed."""
         embed = discord.Embed(title=f"Application from {author.display_name}", color=discord.Color.green())
-        embed.add_field(name="Name", value=author.name)
+        embed.add_field(name="Name", value=answers[0])
         embed.add_field(name="Discord ID", value=author.id)
         embed.add_field(name="Age", value=answers[1])
         embed.add_field(name="Reason wishing to become a member:", value=answers[2])
