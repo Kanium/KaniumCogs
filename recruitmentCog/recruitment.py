@@ -16,12 +16,9 @@ class Recruitment(commands.Cog):
     def __init__(self, bot: Red):
         self.bot = bot
 
-    @commands.group(name="application", description="Starts the flow to create an application for joining Kanium")
+    @commands.group(name="application")
     async def application(self, ctx: commands.Context):
-        """Send an application.
-
-        Use without arguments for an interactive application creation flow, or do
-        `[p]application [text]` to use it non-interactively.
+        """Send an application using an interactive flow!
         """
         author = ctx.author
 
@@ -46,7 +43,12 @@ class Recruitment(commands.Cog):
 
         # Send the embed to the application channel
         application_channel = self.bot.get_channel(application_channel_id)
-        await application_channel.send(embed=embed)
+        message = await application_channel.send(embed=embed)
+
+        # Add reactions to the message
+        reactions = ["✅", "❌", "❓"]
+        for reaction in reactions:
+            await message.add_reaction(reaction)
 
         # Send a confirmation message to the author
         await author.send("Thank you for submitting your application!")
