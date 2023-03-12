@@ -43,10 +43,12 @@ class Recruitment(commands.Cog):
     def __init__(self, bot: Red):
         super().__init__()
         self.bot = bot
+        self.config = Config.get_conf(self, 42631423034200142, force_registration=True)
+        self.config.register_guild(**self.default_guild_settings)
         self.antispam = {}
         self.user_cache = []
         self.tunnel_store = {}
-        self.config = Config.get_conf(self, 42631423034200142, force_registration=True)
+
         # (guild, ticket#):
         #   {'tun': Tunnel, 'msgs': List[int]}
 
