@@ -54,12 +54,18 @@ class Recruitment(commands.Cog):
 
     async def format_application(self, answers: List[str], author: discord.Member) -> discord.Embed:
         """Format the application answers into an embed."""
-        embed = discord.Embed(title=f"Application from [{author.display_name}](https://discordapp.com/users/{author.id})", color=discord.Color.green())
+        embed = discord.Embed(title=f"Application from {author.display_name}", color=discord.Color.green())
         embed.set_thumbnail(url=author.avatar_url)
         embed.add_field(name="Name", value=answers[0])
         embed.add_field(name="Discord ID", value=author.id)
         embed.add_field(name="Age", value=answers[1])
         embed.add_field(name="Reason wishing to become a member:", value=answers[2])
+    
+        # Add a link to the author's profile that opens a private conversation with them
+        author_url = f"https://discordapp.com/users/{author.id}"
+        author_link = f"[Click here to message {author.display_name}]({author_url})"
+        embed.set_footer(text=author_link)
+    
         return embed
 
     async def ask_questions(self, author: discord.Member, questions: List[str]) -> List[str]:
