@@ -254,6 +254,13 @@ class Recruitment(commands.Cog):
                 return await author.send(_("You took too long. Try again later."))
             else:
                 val = await self.send_application(ctx, message, guild)
+                # Get the role to assign using its ID
+                trialRole_id = 531181363420987423 
+                role = get(ctx.guild.roles, id=trialRole_id)
+
+                # Assign the role to the user who sent the application
+                if role is not None:
+                    await author.add_roles(role)
 
         with contextlib.suppress(discord.Forbidden, discord.HTTPException):
             if val is None:
