@@ -15,9 +15,10 @@ class Recruitment(commands.Cog):
 
     def __init__(self, bot: Red):
         self.bot = bot
+        self.message: str = ''
 
-    @commands.group(name="application")
-    async def application(self, ctx: commands.Context) -> None:
+    @commands.group(name="application", usage="[text]", invoke_without_command=True)
+    async def application(self, ctx: commands.Context, *, _application: str = ""):
         author = ctx.author
 
         # Check if the command was sent in a direct message to the bot
