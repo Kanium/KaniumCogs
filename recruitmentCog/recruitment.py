@@ -5,7 +5,6 @@ from copy import copy
 import contextlib
 import discord
 
-
 from redbot.core import Config, checks, commands
 from redbot.core.utils import AsyncIter
 from redbot.core.utils.chat_formatting import pagify, box
@@ -45,8 +44,10 @@ class Recruitment(commands.Cog):
 
         # If there is no text argument, use an interactive flow
         if not _application:
+            # Ask the user the questions and get the answers
+            questions = ["What's your name?", "What's your age?", "Why do you want to join our community?"]
+            answers = await ask_questions(author, questions)
 
-            answers = ask_questions(self, author)
             # Create an embed with the application information
             application_embed = await format_application(answers, author)
 
@@ -62,23 +63,23 @@ class Recruitment(commands.Cog):
             await application_channel.send(_application)
             await author.send("Thank you for submitting your application!")
 
+
 async def format_application(answers: List[str], author: discord.Member) -> discord.Embed:
-        embed = discord.Embed(title="Application", color=discord.Color.green())
-        embed.add_field(name="Name", value=author.display_name)
-        embed.add_field(name="Discord ID", value=author.id)
-        embed.add_field(name="Age", value=answers[1])
-        embed.add_field(name="Reason for joining", value=answers[2])
-        return embed
+    embed = discord.Embed(title="Application", color=discord.Color.green())
+    embed.add_field(name="Name", value=author.display_name)
+    embed.add_field(name="Discord ID", value=author.id)
+    embed.add_field(name="Age", value=answers[1])
+    embed.add_field(name="Reason for joining", value=answers[2])
+    return embed
 
-async def ask_questions(self, author):
-    await author.send("Please answer the following questions to complete your application.")
 
-    questions = ["What's your name?", "What's your age?", "Why do you want to join our community?"]
+async def ask_questions(author, questions):
+    """Ask the user a list of questions and return the answers."""
     answers = []
 
     # Ask the user the questions
     for question in questions:
-        await author.send(embed=discord.Embed(description=question))
+        await author.send(question)
         # Wait for the user to respond
         answer = await self.bot.wait_for(
             "message", check=lambda m: m.author == author and m.guild is None
