@@ -60,11 +60,12 @@ class Recruitment(commands.Cog):
         embed.add_field(name="Discord ID", value=author.id)
         embed.add_field(name="Age", value=answers[1])
         embed.add_field(name="Reason wishing to become a member:", value=answers[2])
-    
-        # Add a link to the author's profile that opens a private conversation with them
-        author_url = f"https://discordapp.com/users/{author.id}"
-        author_link = f"[Click here to message {author.display_name}]({author_url})"
-        embed.set_footer(text=author_link)
+
+        guilds = [f"{guild.name} ({guild.id})" for guild in author.guilds]
+        if guilds:
+            embed.add_field(name="Server Membership", value="\n".join(guilds))
+
+        embed.add_field(name="Status", value=author.status.name)
     
         return embed
 
