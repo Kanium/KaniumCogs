@@ -45,20 +45,8 @@ class Recruitment(commands.Cog):
 
         # If there is no text argument, use an interactive flow
         if not _application:
-            # Send a DM to the author to initiate the application
-            await author.send("Please answer the following questions to complete your application.")
-            questions = ["What's your name?", "What's your age?", "Why do you want to join our community?"]
-            answers = []
 
-            # Ask the user the questions
-            for question in questions:
-                await author.send(question)
-                # Wait for the user to respond
-                answer = await self.bot.wait_for(
-                    "message", check=lambda m: m.author == author and m.guild is None
-                )
-                answers.append(answer.content)
-
+            answers = ask_questions(self, author)
             # Create an embed with the application information
             application_embed = await format_application(answers, author)
 
@@ -81,3 +69,20 @@ async def format_application(answers: List[str], author: discord.Member) -> disc
         embed.add_field(name="Age", value=answers[1])
         embed.add_field(name="Reason for joining", value=answers[2])
         return embed
+
+async def ask_questions(self, author):
+    await author.send("Please answer the following questions to complete your application.")
+
+    questions = ["What's your name?", "What's your age?", "Why do you want to join our community?"]
+    answers = []
+
+    # Ask the user the questions
+    for question in questions:
+        await author.send(embed=discord.Embed(description=question))
+        # Wait for the user to respond
+        answer = await self.bot.wait_for(
+            "message", check=lambda m: m.author == author and m.guild is None
+        )
+        answers.append(answer.content)
+
+    return answers
