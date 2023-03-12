@@ -68,7 +68,7 @@ class Recruitment(commands.Cog):
 
     @checks.admin_or_permissions(manage_guild=True)
     @applicationset.command(name="output")
-    async def reportset_output(
+    async def applicationset_output(
         self, ctx: commands.Context, channel: discord.TextChannel
     ):
         """Set the channel where applications will be sent."""
