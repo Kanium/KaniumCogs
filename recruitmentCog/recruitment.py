@@ -29,12 +29,12 @@ class Recruitment(commands.Cog):
         self.message: str = ''
         self.active = True
 
-    @commands.group(name="apply", usage="[text]", invoke_without_command=True)
-    async def apply(self, ctx: commands.Context, *, _apply: str = ""):
+    @commands.group(name="application", usage="[text]", invoke_without_command=True)
+    async def application(self, ctx: commands.Context, *, _application: str = ""):
         """Send an application.
 
         Use without arguments for an interactive application creation flow, or do
-        `[p]apply [text]` to use it non-interactively.
+        `[p]application [text]` to use it non-interactively.
         """
         author = ctx.author
 
@@ -44,7 +44,7 @@ class Recruitment(commands.Cog):
             return
 
         # If there is no text argument, use an interactive flow
-        if not _apply:
+        if not _application:
             # Send a DM to the author to initiate the application
             await author.send("Please answer the following questions to complete your application.")
             questions = ["What's your name?", "What's your age?", "Why do you want to join our community?"]
@@ -71,7 +71,7 @@ class Recruitment(commands.Cog):
         else:
             # If there is a text argument, use a non-interactive flow
             application_channel = self.bot.get_channel(application_channel_id)
-            await application_channel.send(_apply)
+            await application_channel.send(_application)
             await author.send("Thank you for submitting your application!")
 
 async def format_application(answers: List[str], author: discord.Member) -> discord.Embed:
