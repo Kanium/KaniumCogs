@@ -15,6 +15,7 @@ from redbot.core.utils.predicates import MessagePredicate
 
 application_channel_id = 1023172488143839252
 
+
 class Recruitment(commands.Cog):
     """A cog that lets a user send a membership application.
 
@@ -22,16 +23,14 @@ class Recruitment(commands.Cog):
     to a channel in the server for staff, and the application creator
     gets a DM. Both can be used to communicate.
     """
-  
+
     def __init__(self, bot):
         self.bot = bot
         self.message: str = ''
         self.active = True
 
-
-   
-    @commands.group(name="application", usage="[text]", invoke_without_command=True)
-    async def application(self, ctx: commands.Context, *, _application: str = ""):
+    @commands.group(name="apply", usage="[text]", invoke_without_command=True)
+    async def apply(self, ctx: commands.Context, *, _apply: str = ""):
         """Send an application.
 
         Use without arguments for an interactive application creation flow, or do
@@ -39,9 +38,14 @@ class Recruitment(commands.Cog):
         """
         author = ctx.author
 
+        # Check if the command was sent in a direct message to the bot
+        if not isinstance(ctx.channel, discord.DMChannel):
+            await ctx.send("This command can only be used in a direct message to the bot.")
+            return
+
         # If there is no text argument, use an interactive flow
-        if not _application:
-        # Send a DM to the author to initiate the application
+        if not _apply:
+            # Send a DM to the author to initiate the application
             await author.send("Please answer the following questions to complete your application.")
             questions = ["What's your name?", "What's your age?", "Why do you want to join our community?"]
             answers = []
@@ -55,15 +59,25 @@ class Recruitment(commands.Cog):
                 )
                 answers.append(answer.content)
 
-            # Combine the answers into a single message and send to the application channel
-            application_text = "\n".join([f"{question}: {answer}" for question, answer in zip(questions, answers)])
+            # Create an embed with the application information
+            application_embed = await format_application(answers, author)
+
+            # Send the embed to the application channel
             application_channel = self.bot.get_channel(application_channel_id)
-            await application_channel.send(application_text)
+            await application_channel.send(embed=application_embed)
 
             # Send a confirmation message to the author
             await author.send("Thank you for submitting your application!")
         else:
             # If there is a text argument, use a non-interactive flow
             application_channel = self.bot.get_channel(application_channel_id)
-            await application_channel.send(_application)
+            await application_channel.send(_apply)
             await author.send("Thank you for submitting your application!")
+
+async def format_application(answers: List[str], author: discord.Member) -> discord.Embed:
+        embed = discord.Embed(title="Application", color=discord.Color.green())
+        embed.add_field(name="Name", value=author.display_name)
+        embed.add_field(name="Discord ID", value=author.id)
+        embed.add_field(name="Age", value=answers[1])
+        embed.add_field(name="Reason for joining", value=answers[2])
+        return embed
