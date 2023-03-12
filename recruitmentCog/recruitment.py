@@ -3,7 +3,10 @@ from typing import Union, List, Literal
 from datetime import timedelta
 from copy import copy
 import contextlib
+import gettext
 import discord
+
+_ = gettext.gettext
 
 from redbot.core import Config, checks, commands
 from redbot.core.utils import AsyncIter
@@ -25,7 +28,7 @@ class Recruitment(commands.Cog):
 
     default_guild_settings = {"output_channel": None, "active": False, "next_application": 1}
 
-    default_application = {"apply": {}}
+    default_application = {"application": {}}
 
     # This can be made configurable later if it
     # becomes an issue.
@@ -45,6 +48,8 @@ class Recruitment(commands.Cog):
         self.bot = bot
         self.config = Config.get_conf(self, 42631423034200142, force_registration=True)
         self.config.register_guild(**self.default_guild_settings)
+        self.config.init_custom("RECRUITMENT", 2)
+        self.config.register_custom("RECRUITMENT", **self.default_application)
         self.antispam = {}
         self.user_cache = []
         self.tunnel_store = {}
@@ -193,7 +198,7 @@ class Recruitment(commands.Cog):
 
         return application_number
 
-    @commands.group(name="Application", usage="[text]", invoke_without_command=True)
+    @commands.group(name="application", usage="[text]", invoke_without_command=True)
     async def application(self, ctx: commands.Context, *, _application: str = ""):
         """Send an application.
 
