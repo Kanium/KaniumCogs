@@ -1,12 +1,10 @@
 import asyncio
-from typing import Union, List, Literal
+from typing import Union, List
 from datetime import timedelta
 from copy import copy
 import contextlib
-import gettext
 import discord
 
-_ = gettext.gettext
 
 from redbot.core import Config, checks, commands
 from redbot.core.utils import AsyncIter
@@ -75,7 +73,7 @@ class Recruitment(commands.Cog):
     ):
         """Set the channel where applications will be sent."""
         await self.config.guild(ctx.guild).output_channel.set(channel.id)
-        await ctx.send(_("The application channel has been set."))
+        await ctx.send("The application channel has been set.")
 
     @checks.admin_or_permissions(manage_guild=True)
     @applicationset.command(name="toggle", aliases=["toggleactive"])
@@ -85,9 +83,9 @@ class Recruitment(commands.Cog):
         active = not active
         await self.config.guild(ctx.guild).active.set(active)
         if active:
-            await ctx.send(_("Applications are now enabled"))
+            await ctx.send("Applications are now enabled")
         else:
-            await ctx.send(_("Applications are now disabled"))
+            await ctx.send("Applications are now disabled")
 
     async def internal_filter(self, m: discord.Member, mod=False, perms=None):
         if perms and m.guild_permissions >= perms:
@@ -146,14 +144,14 @@ class Recruitment(commands.Cog):
                 timeout=45,
             )
         except asyncio.TimeoutError:
-            await author.send(_("You took too long to select. Try again later."))
+            await author.send("You took too long to select. Try again later.")
             return None
 
         try:
             message = int(message.content.strip())
             guild = guilds[message - 1]
         except (ValueError, IndexError):
-            await author.send(_("That wasn't a valid choice."))
+            await author.send("That wasn't a valid choice.")
             return None
         else:
             return guild
@@ -175,16 +173,16 @@ class Recruitment(commands.Cog):
         if await self.bot.embed_requested(channel):
             em = discord.Embed(description=application, colour=await ctx.embed_colour())
             em.set_author(
-                name=_("Application from {author}{maybe_nick}").format(
+                name="Application from {author}{maybe_nick}".format(
                     author=author, maybe_nick=(f" ({author.nick})" if author.nick else "")
                 ),
                 icon_url=author.display_avatar,
             )
-            em.set_footer(text=_("Application #{}").format(application_number))
+            em.set_footer(text="Application #{}".format(application_number))
             send_content = None
         else:
             em = None
-            send_content = _("Application from {author.mention} (Application #{number})").format(
+            send_content = "Application from {author.mention} (Application #{number})".format(
                 author=author, number=application_number
             )
             send_content += "\n" + application
@@ -209,30 +207,26 @@ class Recruitment(commands.Cog):
         guild = ctx.guild
         if guild is None:
             guild = await self.discover_guild(
-                author, prompt=_("Select a server to make an application in by number.")
+                author, prompt="Select a server to make an application in by number."
             )
         if guild is None:
             return
         g_active = await self.config.guild(guild).active()
         if not g_active:
-            return await author.send(_("Applications are currently closed"))
+            return await author.send("Applications are currently closed")
         if guild.id not in self.antispam:
             self.antispam[guild.id] = {}
         if author.id not in self.antispam[guild.id]:
             self.antispam[guild.id][author.id] = AntiSpam(self.intervals)
         if self.antispam[guild.id][author.id].spammy:
-            return await author.send(
-                _(
+            return await author.send(    
                     "You've sent too many applications recently. "
                     "Are you sure you are in the right place? "
-                )
             )
         if author.id in self.user_cache:
             return await author.send(
-                _(
                     "Please finish making your prior application before trying to make an "
                     "additional one!"
-                )
             )
         self.user_cache.append(author.id)
 
@@ -244,13 +238,11 @@ class Recruitment(commands.Cog):
         else:
             try:
                 await author.send(
-                    _(
                         "Please respond to this message with your application."
                         "\nYour application should be a single message"
-                    )
                 )
             except discord.Forbidden:
-                return await ctx.send(_("This requires DMs enabled."))
+                return await ctx.send("This requires DMs enabled.")
 
             try:
                 message = await self.bot.wait_for(
@@ -259,7 +251,7 @@ class Recruitment(commands.Cog):
                     timeout=180,
                 )
             except asyncio.TimeoutError:
-                return await author.send(_("You took too long. Try again later."))
+                return await author.send("You took too long. Try again later.")
             else:
                 val = await self.send_application(ctx, message, guild)
                 # Get the role to assign using its ID
@@ -274,16 +266,12 @@ class Recruitment(commands.Cog):
             if val is None:
                 if await self.config.guild(ctx.guild).output_channel() is None:
                     await author.send(
-                        _(
                             "Hmm, most embarrassing, it rather seems Hatt has neglected to tell me where the applications room is. Please contact him for me."
-                        )
                     )
                 else:
-                    await author.send(
-                        _("Drat! There was an error sending your application, please contact Hatt.")
-                    )
+                    await author.send("Drat! There was an error sending your application, please contact Hatt.")
             else:
-                await author.send(_("Your application was submitted. (Application #{})").format(val))
+                await author.send("Your application was submitted. (Application #{})".format(val))
                 self.antispam[guild.id][author.id].stamp()
 
     @application.after_invoke
@@ -310,7 +298,7 @@ class Recruitment(commands.Cog):
                 to_remove.append(k)
                 continue
 
-            topic = _("Re: application# {application_number} in {guild.name}").format(
+            topic = "Re: application# {application_number} in {guild.name}".format(
                 application_number=application_number, guild=guild
             )
             # Tunnels won't forward unintended messages, this is safe
@@ -322,9 +310,8 @@ class Recruitment(commands.Cog):
             if tun := self.tunnel_store.pop(key, None):
                 guild, application = key
                 await tun["tun"].close_because_disabled(
-                    _(
                         "Correspondence about application# {application_number} in "
                         "{guild.name} has been ended due "
                         "to applications being closed."
-                    ).format(application_number=application, guild=guild)
+                        .format(application_number=application, guild=guild)
                 )
