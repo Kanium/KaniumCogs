@@ -17,9 +17,7 @@ class Recruitment(commands.Cog):
         self.bot = bot
 
     @commands.group(name="application")
-    async def application(self, ctx: commands.Context):
-        """Send an application using an interactive flow!
-        """
+    async def application(self, ctx: commands.Context) -> None:
         author = ctx.author
 
         # Check if the command was sent in a direct message to the bot
