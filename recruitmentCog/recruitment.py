@@ -1,5 +1,6 @@
 import asyncio
 from typing import List
+import datetime
 import discord
 from redbot.core import Config, checks, commands
 from redbot.core.utils import AsyncIter
@@ -81,15 +82,19 @@ class Recruitment(commands.Cog):
 
     async def format_application(self, answers: List[str], author: discord.Member) -> discord.Embed:
         """Format the application answers into an embed."""
+        application_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        trial_end_date = (datetime.datetime.now() + datetime.timedelta(days=30)).strftime("%Y-%m-%d")
+
         embed = discord.Embed(title=f"Application from {author.display_name}#{author.discriminator}", color=discord.Color.green())
         embed.set_thumbnail(url=author.avatar_url)
         embed.add_field(name="Name", value=answers[0])
         embed.add_field(name="Age", value=answers[1])
         embed.add_field(name="Country", value=answers[2])
         embed.add_field(name="Hobbies", value=answers[3])
-        embed.add_field(name="Here for particular game?", value=answers[4])
+        embed.add_field(name="Specific game?", value=answers[4])
         embed.add_field(name="\u200b", value="\u200b")  # Empty field for spacing
         embed.add_field(name="Motivation for wanting to join:", value=answers[5], inline=False)
+        embed.set_footer(text=f"Application received: {application_date}, Trial ends: {trial_end_date}")
     
         return embed
 
