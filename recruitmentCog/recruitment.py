@@ -43,8 +43,11 @@ class Recruitment(commands.Cog):
 
         answers = await self.ask_questions(author)
 
-        embeddedApplication = await self.format_application(answers, author)
+        if not answers:
+            return
 
+        embeddedApplication = await self.format_application(answers, author)
+        
         # Call the sendApplication to check if the author is a member of the guild and send the application if they are
         await self.sendApplication(author, embeddedApplication)
 
@@ -89,7 +92,15 @@ class Recruitment(commands.Cog):
 
     async def ask_questions(self, author: discord.Member) -> List[str]:
         """Ask the user several questions and return the answers."""
-        questions = ["First of all, what is your name?", "What age are you?", "Where are you from?", "Do you have any hobbies?", "Are you wishing to join because of a particular game? If so, which game?", "Write out, in a free-style way, what your motivation is for wanting to join us in particular and how you would be a good fit for Kanium"]
+        questions = [
+            "First of all, what is your name?",
+            "What age are you?",
+            "Where are you from?",
+            "Do you have any hobbies?",
+            "Are you wishing to join because of a particular game? If so, which game?",
+            "Write out, in a free-style way, what your motivation is for wanting to join us in particular and how you would be a good fit for Kanium",
+        ]
+
         answers = []
 
         for question in questions:
@@ -97,11 +108,10 @@ class Recruitment(commands.Cog):
 
             try:
                 answer = await asyncio.wait_for(self.get_answers(author), timeout=60.0)
+                answers.append(answer.content)
             except asyncio.TimeoutError:
-                await author.send("You took too long to answer. Please try again later.")
-                return None
-
-            answers.append(answer.content)
+                await author.send("You took too long to answer. Please start over by using the application command again.")
+                return []
 
         return answers
 
