@@ -52,6 +52,11 @@ class Recruitment(commands.Cog):
         # Send a confirmation message to the author
         await author.send("Thank you for submitting your application!")
 
+        # Assign the role to the author
+        guild = self.bot.get_guild(application_channel.guild.id)
+        role = guild.get_role(531181363420987423)
+        await author.add_roles(role)
+
     async def format_application(self, answers: List[str], author: discord.Member) -> discord.Embed:
         """Format the application answers into an embed."""
         embed = discord.Embed(title=f"Application from {author.display_name}", color=discord.Color.green())
@@ -60,12 +65,6 @@ class Recruitment(commands.Cog):
         embed.add_field(name="Discord ID", value=author.id)
         embed.add_field(name="Age", value=answers[1])
         embed.add_field(name="Reason wishing to become a member:", value=answers[2])
-
-        guilds = [f"{guild.name} ({guild.id})" for guild in author.guilds]
-        if guilds:
-            embed.add_field(name="Server Membership", value="\n".join(guilds))
-
-        embed.add_field(name="Status", value=author.status.name)
     
         return embed
 
