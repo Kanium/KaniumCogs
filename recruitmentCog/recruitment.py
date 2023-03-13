@@ -8,6 +8,7 @@ from redbot.core.utils.antispam import AntiSpam
 from redbot.core.bot import Red
 from redbot.core.utils.predicates import MessagePredicate
 
+guild_id = 274657393936302080
 application_channel_id = 1023172488143839252
 
 class Recruitment(commands.Cog):
@@ -52,8 +53,8 @@ class Recruitment(commands.Cog):
         # Send a confirmation message to the author
         await author.send("Thank you for submitting your application!")
 
-        # Assign the role to the author
-        guild = self.bot.get_guild(application_channel.guild.id)
+        # Add "Trial" role to the author
+        guild = self.bot.get_guild(guild_id)
         role = guild.get_role(531181363420987423)
         await author.add_roles(role)
 
