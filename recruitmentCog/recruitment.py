@@ -51,27 +51,31 @@ class Recruitment(commands.Cog):
             await ctx.send(f"You need to be in the {guild.name} server to submit an application.")
             return
 
-        if await self.is_direct_message(ctx):
+        if await self.check_author_is_member_and_channel_is_dm(ctx):
             await self.interactive_application(author)
 
     async def get_guild_id(self, ctx: commands.Context) -> int:
         guild_id = await self.config.guild(ctx.author.guild).guild_id()
         return guild_id
 
-    async def is_direct_message(self, ctx: commands.Context) -> bool:
+    async def check_author_is_member_and_channel_is_dm(self, ctx: commands.Context) -> bool:
+        if not isinstance(ctx.author, discord.Member):
+            await ctx.send("You need to join the server before your application can be processed.")
+            return False
         if not isinstance(ctx.channel, discord.DMChannel):
             try:
                 await ctx.message.delete()
             except:
                 pass
             await ctx.author.send("Please use this command in DM with me.")
-            await self.interactive_application(ctx.author)
+            await self.interactive_application(ctx)
             return False
         return True
 
 
-    async def interactive_application(self, author: discord.Member):
+    async def interactive_application(self, ctx: commands.Context):
         """Ask the user several questions to create an application."""
+        author = ctx.author
         embed = discord.Embed(
             title="+++ KANIUM APPLICATION SYSTEM +++",
             description="Ah, you wish to apply for Kanium membership. Very well, understand that This process is very important to us so we expect you to put effort in and be glorious about it. Let us begin!",
