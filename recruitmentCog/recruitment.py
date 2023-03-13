@@ -34,7 +34,13 @@ class Recruitment(commands.Cog):
 
     async def interactive_application(self, author: discord.Member):
         """Ask the user several questions to create an application."""
-        author.send("Ah, you wish to apply for Kanium membership. Very well, understand that This process is very important to us so we expect you to put effort in and be glorious about it. Let us begin!")
+        embed = discord.Embed(
+            title="Kanium Membership Application",
+            description="Ah, you wish to apply for Kanium membership. Very well, understand that This process is very important to us so we expect you to put effort in and be glorious about it. Let us begin!",
+            color=discord.Color.green(),
+        )
+        await author.send(embed=embed)
+        
         questions = ["First of all, what is your name?", "What age are you?", "Where are you from?", "Do you have any hobbies?", "Are you wishing to join because of a particular game? If so, which game?", "Write out, in a free-style way, what your motivation is for wanting to join us in particular and how you would be a good fit for Kanium"]
         try:
             answers = await self.ask_questions(author, questions)
