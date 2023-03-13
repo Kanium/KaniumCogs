@@ -40,18 +40,13 @@ class Recruitment(commands.Cog):
 
     @commands.group(name="application", usage="[text]", invoke_without_command=True)
     async def application(self, ctx: commands.Context, *, _application: str = ""):
-        guild_id = await self.config.guild(ctx.guild).guild_id()
-        author = ctx.author
-
-        if not guild_id:
-            await ctx.send("The guild has not been set. Please use the `setguild` command to set it.")
-            return
-    
+        guild_id = await self.get_guild_id(ctx)
         guild = discord.utils.get(self.bot.guilds, id=guild_id)
         if guild is None:
             await ctx.send(f"The guild with ID {guild_id} could not be found.")
             return
 
+        author = ctx.author
         if author.guild != guild:
             await ctx.send(f"You need to be in the {guild.name} server to submit an application.")
             return
@@ -61,16 +56,19 @@ class Recruitment(commands.Cog):
 
     async def get_guild_id(self, ctx: commands.Context) -> int:
         guild_id = await self.config.guild(ctx.guild).guild_id()
-        if not guild_id:
-            await ctx.send("The guild has not been set. Please use the `setapplicationschannel` command to set it.")
-            return None
         return guild_id
 
     async def is_direct_message(self, ctx: commands.Context) -> bool:
         if not isinstance(ctx.channel, discord.DMChannel):
-            await ctx.send("This command can only be used in a direct message to the bot.")
+            try:
+                await ctx.message.delete()
+            except:
+                pass
+            await ctx.author.send("Please use this command in DM with me.")
+            await self.interactive_application(ctx.author)
             return False
         return True
+
 
     async def interactive_application(self, author: discord.Member):
         """Ask the user several questions to create an application."""
