@@ -55,7 +55,7 @@ class Recruitment(commands.Cog):
             await self.interactive_application(author)
 
     async def get_guild_id(self, ctx: commands.Context) -> int:
-        guild_id = await self.config.guild(ctx.guild).guild_id()
+        guild_id = await self.config.guild(ctx.author.guild).guild_id()
         return guild_id
 
     async def is_direct_message(self, ctx: commands.Context) -> bool:
