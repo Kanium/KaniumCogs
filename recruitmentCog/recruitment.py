@@ -40,7 +40,7 @@ class Recruitment(commands.Cog):
 
     @commands.group(name="application", usage="[text]", invoke_without_command=True)
     async def application(self, ctx: commands.Context, *, _application: str = ""):
-        guild_id = await self.get_guild_id(ctx)
+        guild_id = await self.config.guild(ctx.guild).guild_id()
         author = ctx.author
 
         if not guild_id:
@@ -59,6 +59,12 @@ class Recruitment(commands.Cog):
         if await self.is_direct_message(ctx):
             await self.interactive_application(author)
 
+    async def get_guild_id(self, ctx: commands.Context) -> int:
+        guild_id = await self.config.guild(ctx.guild).guild_id()
+        if not guild_id:
+            await ctx.send("The guild has not been set. Please use the `setapplicationschannel` command to set it.")
+            return None
+        return guild_id
 
     async def is_direct_message(self, ctx: commands.Context) -> bool:
         if not isinstance(ctx.channel, discord.DMChannel):
