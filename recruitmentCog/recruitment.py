@@ -101,11 +101,16 @@ class Recruitment(commands.Cog):
         if member is None:
             await author.send("You need to join the server before your application can be processed.")
             return
-        
+
         # Send the embed to the application channel
-        application_channel = await self.config.guild(guild).application_channel_id()
-        if not application_channel:
-            await author.send("The application channel has not been set. Please use the `setapplicationchannel` command to set it.")
+        application_channel_id = await self.config.guild(guild).application_channel_id()
+        if not application_channel_id:
+            await author.send("The application channel has not been set. Please use the `setapplicationschannel` command to set it.")
+            return
+
+        application_channel = guild.get_channel(application_channel_id)
+        if application_channel is None:
+            await author.send(f"The application channel with ID {application_channel_id} could not be found.")
             return
 
         try:
