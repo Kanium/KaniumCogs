@@ -10,7 +10,7 @@ from redbot.core.bot import Red
 from redbot.core.utils.predicates import MessagePredicate
 
 guild_id = 274657393936302080
-application_channel_id = 1023172488143839252
+application_channel_id = 656913501243310093
 
 class Recruitment(commands.Cog):
     """A cog that lets a user send a membership application."""
