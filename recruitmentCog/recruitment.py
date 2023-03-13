@@ -81,14 +81,15 @@ class Recruitment(commands.Cog):
 
     async def format_application(self, answers: List[str], author: discord.Member) -> discord.Embed:
         """Format the application answers into an embed."""
-        embed = discord.Embed(title=f"Application from {author.display_name}", color=discord.Color.green())
+        embed = discord.Embed(title=f"Application from {author.display_name}#{author.discriminator}", color=discord.Color.green())
         embed.set_thumbnail(url=author.avatar_url)
         embed.add_field(name="Name", value=answers[0])
         embed.add_field(name="Age", value=answers[1])
         embed.add_field(name="Country", value=answers[2])
         embed.add_field(name="Hobbies", value=answers[3])
         embed.add_field(name="Here for particular game?", value=answers[4])
-        embed.add_field(name="Motivation for wanting to join:", value=answers[5])
+        embed.add_field(name="\u200b", value="\u200b")  # Empty field for spacing
+        embed.add_field(name="Motivation for wanting to join:", value=answers[5], inline=False)
     
         return embed
 
