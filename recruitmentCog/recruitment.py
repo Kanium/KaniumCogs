@@ -61,6 +61,8 @@ class Recruitment(commands.Cog):
         role = guild.get_role(531181363420987423)
         await member.add_roles(role)
 
+        await author.send("Thank you for submitting your application! You have been given the 'Trial' role.")
+
     async def format_application(self, answers: List[str], author: discord.Member) -> discord.Embed:
         """Format the application answers into an embed."""
         embed = discord.Embed(title=f"Application from {author.display_name}", color=discord.Color.green())
