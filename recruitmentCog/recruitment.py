@@ -50,13 +50,16 @@ class Recruitment(commands.Cog):
         for reaction in reactions:
             await message.add_reaction(reaction)
 
-        # Send a confirmation message to the author
-        await author.send("Thank you for submitting your application!")
+        # Check if the author is a member of the guild
+        guild = self.bot.get_guild(274657393936302080)
+        member = guild.get_member(author.id)
+        if member is None:
+            await author.send("You need to join the server before your application can be processed.")
+            return
 
-        # Add "Trial" role to the author
-        guild = self.bot.get_guild(guild_id)
+        # Assign the Trial role to the author
         role = guild.get_role(531181363420987423)
-        await author.add_roles(role)
+        await member.add_roles(role)
 
     async def format_application(self, answers: List[str], author: discord.Member) -> discord.Embed:
         """Format the application answers into an embed."""
