@@ -3,14 +3,9 @@ from typing import List
 import datetime
 import discord
 from redbot.core import Config, checks, commands
-from redbot.core.utils import AsyncIter
-from redbot.core.utils.chat_formatting import pagify, box
 from redbot.core.utils.antispam import AntiSpam
 from redbot.core.bot import Red
-from redbot.core.utils.predicates import MessagePredicate
 
-guild_id = 274657393936302080
-application_channel_id = 656913501243310093
 
 class Recruitment(commands.Cog):
     """A cog that lets a user send a membership application."""
@@ -18,11 +13,49 @@ class Recruitment(commands.Cog):
     def __init__(self, bot: Red):
         self.bot = bot
         self.message: str = ''
+        self.config = Config.get_conf(self, identifier=101101101101001110101) # Replace with your own unique identifier
+        default_guild = {"guild_id": 274657393936302080, "application_channel_id": None}
+        self.config.register_guild(**default_guild)
+
+
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    @commands.group(name="setapplicationschannel", pass_context=True, no_pm=True)
+    async def setapplicationschannel(self, ctx: commands.Context):
+        """Set the channel where applications will be sent."""
+        if ctx.invoked_subcommand is None:
+            guild = ctx.guild
+            channel = ctx.channel
+            await self.config.guild(guild).guild_id.set(guild.id)
+            await self.config.guild(guild).application_channel_id.set(channel.id)
+            await ctx.send(f"Application channel set to {channel.mention}.")
+
+    @setapplicationschannel.command(name="clear")
+    async def clear_application_channel(self, ctx: commands.Context):
+        """Clear the current application channel."""
+        guild = ctx.guild
+        await self.config.guild(guild).clear_raw("application_channel_id")
+        await ctx.send("Application channel cleared.")
 
 
     @commands.group(name="application", usage="[text]", invoke_without_command=True)
     async def application(self, ctx: commands.Context, *, _application: str = ""):
+        guild_id = await self.get_guild_id(ctx)
         author = ctx.author
+
+        if not guild_id:
+            await ctx.send("The guild has not been set. Please use the `setguild` command to set it.")
+            return
+    
+        guild = discord.utils.get(self.bot.guilds, id=guild_id)
+        if guild is None:
+            await ctx.send(f"The guild with ID {guild_id} could not be found.")
+            return
+
+        if author.guild != guild:
+            await ctx.send(f"You need to be in the {guild.name} server to submit an application.")
+            return
+
         if await self.is_direct_message(ctx):
             await self.interactive_application(author)
 
@@ -55,22 +88,38 @@ class Recruitment(commands.Cog):
 
     async def sendApplication(self, author: discord.Member, embeddedApplication: discord.Embed):
         # Check if the author is a member of the guild
-        guild = self.bot.get_guild(guild_id)
+        guild = author.guild
         member = guild.get_member(author.id)
         if member is None:
             await author.send("You need to join the server before your application can be processed.")
             return
-
+        
         # Send the embed to the application channel
-        application_channel = self.bot.get_channel(application_channel_id)
-        message = await application_channel.send(embed=embeddedApplication)
+        application_channel = await self.config.guild(guild).application_channel_id()
+        if not application_channel:
+            await author.send("The application channel has not been set. Please use the `setapplicationchannel` command to set it.")
+            return
+
+        try:
+            message = await application_channel.send(embed=embeddedApplication)
+        except discord.Forbidden:
+            await author.send("I do not have permission to send messages in the application channel.")
+            return
 
         # Add reactions to the message
-        await self.add_reactions(message)
+        try:
+            await self.add_reactions(message)
+        except discord.Forbidden:
+            await author.send("I do not have permission to add reactions to messages in the application channel.")
+            return
 
         # Assign the Trial role to the author
         role = guild.get_role(531181363420987423)
-        await member.add_roles(role)
+        try:
+            await member.add_roles(role)
+        except discord.Forbidden:
+            await author.send("I do not have permission to assign roles.")
+            return
 
         await author.send("Thank you for submitting your application! You have been given the 'Trial' role.")
 
@@ -116,7 +165,7 @@ class Recruitment(commands.Cog):
             await author.send(question)
 
             try:
-                answer = await asyncio.wait_for(self.get_answers(author), timeout=60.0)
+                answer = await asyncio.wait_for(self.get_answers(author), timeout=300.0)
                 answers.append(answer.content)
             except asyncio.TimeoutError:
                 await author.send("You took too long to answer. Please start over by using the application command again.")
