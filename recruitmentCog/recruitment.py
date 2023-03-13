@@ -67,7 +67,6 @@ class Recruitment(commands.Cog):
                 await ctx.message.delete()
             except:
                 pass
-            await ctx.author.send("Please use this command in DM with me.")
             await self.interactive_application(ctx)
             return False
         return True
@@ -147,14 +146,13 @@ class Recruitment(commands.Cog):
         application_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         trial_end_date = (datetime.datetime.now() + datetime.timedelta(days=30)).strftime("%Y-%m-%d")
 
-        embed = discord.Embed(title=f"Application from {author.display_name}#{author.discriminator}", color=discord.Color.green())
+        embed = discord.Embed(title=f"Application from {author.name}#{author.discriminator}", color=discord.Color.green())
         embed.set_thumbnail(url=author.avatar_url)
         embed.add_field(name="Name", value=answers[0])
         embed.add_field(name="Age", value=answers[1])
         embed.add_field(name="Country", value=answers[2])
         embed.add_field(name="Hobbies", value=answers[3])
         embed.add_field(name="Specific game?", value=answers[4])
-        embed.add_field(name="Discord ID", value=f"[DM User](https://discord.com/users/{author.id})")
         embed.add_field(name="\u200b", value="\u200b")  # Empty field for spacing
         embed.add_field(name="Motivation for wanting to join:", value=answers[5], inline=False)
         embed.set_footer(text=f"Application received: {application_date}, Trial ends: {trial_end_date}")
