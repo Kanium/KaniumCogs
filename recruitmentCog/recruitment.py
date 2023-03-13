@@ -35,18 +35,13 @@ class Recruitment(commands.Cog):
     async def interactive_application(self, author: discord.Member):
         """Ask the user several questions to create an application."""
         embed = discord.Embed(
-            title="Kanium Membership Application",
+            title="+++ KANIUM APPLICATION SYSTEM +++",
             description="Ah, you wish to apply for Kanium membership. Very well, understand that This process is very important to us so we expect you to put effort in and be glorious about it. Let us begin!",
             color=discord.Color.green(),
         )
         await author.send(embed=embed)
-        
-        questions = ["First of all, what is your name?", "What age are you?", "Where are you from?", "Do you have any hobbies?", "Are you wishing to join because of a particular game? If so, which game?", "Write out, in a free-style way, what your motivation is for wanting to join us in particular and how you would be a good fit for Kanium"]
-        try:
-            answers = await self.ask_questions(author, questions)
-        except asyncio.TimeoutError:
-            await author.send("You took too long to answer. Please try again later.")
-            return
+
+        answers = await self.ask_questions(author)
 
         embeddedApplication = await self.format_application(answers, author)
 
@@ -92,13 +87,20 @@ class Recruitment(commands.Cog):
     
         return embed
 
-    async def ask_questions(self, author: discord.Member, questions: List[str]) -> List[str]:
+    async def ask_questions(self, author: discord.Member) -> List[str]:
         """Ask the user several questions and return the answers."""
+        questions = ["First of all, what is your name?", "What age are you?", "Where are you from?", "Do you have any hobbies?", "Are you wishing to join because of a particular game? If so, which game?", "Write out, in a free-style way, what your motivation is for wanting to join us in particular and how you would be a good fit for Kanium"]
         answers = []
 
         for question in questions:
             await author.send(question)
-            answer = await self.get_answers(author)
+
+            try:
+                answer = await asyncio.wait_for(self.get_answers(author), timeout=60.0)
+            except asyncio.TimeoutError:
+                await author.send("You took too long to answer. Please try again later.")
+                return None
+
             answers.append(answer.content)
 
         return answers
@@ -107,4 +109,4 @@ class Recruitment(commands.Cog):
         """Wait for the user to send a message."""
         return await self.bot.wait_for(
             "message", check=lambda m: m.author == author and m.guild is None
-        )
+        )   
