@@ -30,7 +30,8 @@ class ReginaldCog(commands.Cog):
         try:
             api_key = await self.config.guild(ctx.guild).openai_api_key()
             if api_key is None:
-                raise ValueError('OpenAI API key not set. Please use the "setreginaldcogapi" command to set the key.')
+                await ctx.author.send('OpenAI API key not set. Please use the "!setreginaldcogapi" command to set the key.')
+                return
             model = await self.config.openai_model()
             openai.api_key = api_key
             max_tokens = min(len(prompt) * 2, 2048)
