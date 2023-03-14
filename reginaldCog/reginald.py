@@ -1,5 +1,6 @@
 import openai
 import os
+import random
 from redbot.core import Config, commands
 
 class ReginaldCog(commands.Cog):
@@ -25,8 +26,15 @@ class ReginaldCog(commands.Cog):
     @commands.command()
     async def reginald(self, ctx, *, prompt=None):
         """Ask Reginald a question"""
+        greetings = [
+            "Greetings! How may I be of assistance to you?",
+            "Yes? How may I help?",
+            "Good day! How can I help you?",
+            "You rang? What can I do for you?",
+        ]
         if prompt is None:
-            prompt = "Hey,"
+            await ctx.send(random.choice(greetings))
+            return
         try:
             api_key = await self.config.guild(ctx.guild).openai_api_key()
             if api_key is None:
@@ -47,7 +55,7 @@ class ReginaldCog(commands.Cog):
         except openai.error.OpenAIError as e:
             import traceback
             traceback.print_exc()
-            await ctx.send(f"I apologize, sir, but I am unable to generate a response at this time. Error message: {str(e)}")
+            await ctx.send(f"I apologize, but I am unable to generate a response at this time. Error message: {str(e)}")
 
 def setup(bot):
     cog = ReginaldCog(bot)
