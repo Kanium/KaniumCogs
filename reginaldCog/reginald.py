@@ -9,18 +9,28 @@ class ReginaldCog(commands.Cog):
         self.config.register_global(
             openai_model="text-davinci-002"
         )
+        self.config.register_guild(
+            openai_api_key=None
+        )
 
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
+    @commands.command()
+    async def setreginaldcogapi(self, ctx, api_key):
+        """Set the OpenAI API key"""
+        await self.config.guild(ctx.guild).openai_api_key.set(api_key)
+        await ctx.send("OpenAI API key set successfully.")
+
+    @commands.guild_only()
     @commands.command()
     async def reginald(self, ctx, *, prompt=None):
         """Ask Reginald a question"""
         if prompt is None:
             prompt = "Hey,"
         try:
-            api_key = os.environ.get('OPENAI_API_KEY')
+            api_key = await self.config.guild(ctx.guild).openai_api_key()
             if api_key is None:
-                raise ValueError('OPENAI_API_KEY environment variable not set')
+                raise ValueError('OpenAI API key not set. Please use the "setreginaldcogapi" command to set the key.')
             model = await self.config.openai_model()
             openai.api_key = api_key
             max_tokens = min(len(prompt) * 2, 2048)
