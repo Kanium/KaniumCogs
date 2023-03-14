@@ -16,16 +16,14 @@ class ReginaldCog(commands.Cog):
 
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
-    @commands.command()
+    @commands.command(help="Set the OpenAI API key")
     async def setreginaldcogapi(self, ctx, api_key):
-        """Set the OpenAI API key"""
         await self.config.guild(ctx.guild).openai_api_key.set(api_key)
         await ctx.send("OpenAI API key set successfully.")
 
     @commands.guild_only()
-    @commands.command()
+    @commands.command(help="Ask Reginald a question")
     async def reginald(self, ctx, *, prompt=None):
-        """Ask Reginald a question"""
         greetings = [
             "Greetings! How may I be of assistance to you?",
             "Yes? How may I help?",
@@ -35,27 +33,35 @@ class ReginaldCog(commands.Cog):
         if prompt is None:
             await ctx.send(random.choice(greetings))
             return
+
+        api_key = await self.config.guild(ctx.guild).openai_api_key()
+        if api_key is None:
+            await ctx.author.send('OpenAI API key not set. Please use the "!setreginaldcogapi" command to set the key.')
+            return
+
         try:
-            api_key = await self.config.guild(ctx.guild).openai_api_key()
-            if api_key is None:
-                await ctx.author.send('OpenAI API key not set. Please use the "!setreginaldcogapi" command to set the key.')
-                return
-            model = await self.config.openai_model()
-            openai.api_key = api_key
-            max_tokens = min(len(prompt) * 2, 2048)
-            response = openai.Completion.create(
-                model=model,
-                prompt=prompt,
-                max_tokens=max_tokens,
-                n=1,
-                stop=None,
-                temperature=0.5,
-            )
-            await ctx.send(response.choices[0].text.strip())
+            response_text = await self.generate_response(api_key, prompt)
+            await ctx.send(response_text)
         except openai.error.OpenAIError as e:
-            import traceback
-            traceback.print_exc()
             await ctx.send(f"I apologize, but I am unable to generate a response at this time. Error message: {str(e)}")
+
+    async def generate_response(self, api_key, prompt):
+        model = await self.config.openai_model()
+        openai.api_key = api_key
+        max_tokens = 1000
+        temperature = 0.7
+        response = openai.Completion.create(
+            model=model,
+            prompt=prompt,
+            max_tokens=max_tokens,
+            n=1,
+            stop=None,
+            temperature=temperature,
+            presence_penalty=0.3,
+            frequency_penalty=0.3,
+            best_of=3
+        )
+        return response.choices[0].text.strip()
 
 def setup(bot):
     cog = ReginaldCog(bot)
