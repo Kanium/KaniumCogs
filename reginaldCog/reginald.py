@@ -6,7 +6,7 @@ from ratelimit import rate_limited
 class ReginaldCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.api_key = self.bot.config.get("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")
+        self.api_key = self.bot.config.get("openai_api_key")
         openai.api_key = self.api_key
         self.model = self.bot.config.get("openai_model")
         self.lock = Lock()
@@ -35,6 +35,7 @@ class ReginaldCog(commands.Cog):
                 print(f"OpenAI API Error: {e}")
 
 def setup(bot):
-    bot.config.register("openai_api_key", default=None)
+    bot.config.register("openai_api_key", default="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")
     bot.config.register("openai_model", default="text-davinci-002")
-    bot.add_cog(ReginaldCog(bot))
+    cog = ReginaldCog(bot)
+    bot.add_cog(cog)
