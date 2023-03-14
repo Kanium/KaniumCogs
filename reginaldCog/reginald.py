@@ -32,8 +32,9 @@ class ReginaldCog(commands.Cog):
             )
             await ctx.send(response.choices[0].text.strip())
         except openai.error.OpenAIError as e:
-            await ctx.send("I apologize, sir, but I am unable to generate a response at this time.")
-            print(f"OpenAI API Error: {e}")
+            import traceback
+            traceback.print_exc()
+            await ctx.send(f"I apologize, sir, but I am unable to generate a response at this time. Error message: {str(e)}")
 
 def setup(bot):
     cog = ReginaldCog(bot)
