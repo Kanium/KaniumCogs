@@ -4,9 +4,9 @@ from redbot.core import Config, commands
 class ReginaldCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.config = Config.get_conf(self, identifier=1234567890)
+        self.config = Config.get_conf(self, identifier=71717171171717)
         self.config.register_global(
-            openai_api_key="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",
+            openai_api_key="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",
             openai_model="text-davinci-002"
         )
 
@@ -32,9 +32,8 @@ class ReginaldCog(commands.Cog):
             )
             await ctx.send(response.choices[0].text.strip())
         except openai.error.OpenAIError as e:
-            import traceback
-            traceback.print_exc()
-            await ctx.send(f"I apologize, sir, but I am unable to generate a response at this time. Error message: {str(e)}")
+            await ctx.send("I apologize, sir, but I am unable to generate a response at this time.")
+            print(f"OpenAI API Error: {e}")
 
 def setup(bot):
     cog = ReginaldCog(bot)
