@@ -8,6 +8,7 @@ import base64
 import aiohttp
 from io import BytesIO
 from PIL import Image
+import tempfile
 from redbot.core import Config, commands
 
 
@@ -135,9 +136,10 @@ class ReginaldCog(commands.Cog):
                         async with session.get(image_url) as resp:
                             image_data = await resp.read()
                             image = Image.open(BytesIO(image_data))
-                            image.save("image.png")
-                await ctx.send(file=discord.File("image.png"))
-                os.remove("image.png")
+                            with tempfile.TemporaryDirectory() as temp_dir:
+                                image_path = os.path.join(temp_dir, "image.png")
+                                image.save(image_path)
+                                await ctx.send(file=discord.File(image_path))
             else:
                 await ctx.author.send("I apologize, but I am unable to generate an image based on the provided prompt.")
         except Exception as e:
