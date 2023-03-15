@@ -23,7 +23,7 @@ class ReginaldCog(commands.Cog):
 
     @commands.guild_only()
     @commands.command(help="Ask Reginald a question")
-    @commands.cooldown(1, 300, commands.BucketType.user)  # 5-minute cooldown per user
+    @commands.cooldown(1, 60, commands.BucketType.user)  # 1-minute cooldown per user
     async def reginald(self, ctx, *, prompt=None):
         ignored_user_id = 138125632876838912
         if ctx.author.id == ignored_user_id:
@@ -46,15 +46,19 @@ class ReginaldCog(commands.Cog):
 
         try:
             response_text = await self.generate_response(api_key, prompt)
-            await ctx.send(response_text)
+            for chunk in self.split_response(response_text, 2000):
+                await ctx.send(chunk)
         except openai.error.OpenAIError as e:
             await ctx.send(f"I apologize, but I am unable to generate a response at this time. Error message: {str(e)}")
+        except commands.CommandOnCooldown as e:
+            remaining_seconds = int(e.retry_after)
+            await ctx.author.send(f'Please wait {remaining_seconds} seconds before using the "reginald" command again.')
 
     async def generate_response(self, api_key, prompt):
         model = await self.config.openai_model()
         openai.api_key = api_key
         max_tokens = 1000
-        temperature = 0.7
+        temperature = 0.5
         response = openai.Completion.create(
             model=model,
             prompt=prompt,
@@ -62,11 +66,22 @@ class ReginaldCog(commands.Cog):
             n=1,
             stop=None,
             temperature=temperature,
-            presence_penalty=0.3,
-            frequency_penalty=0.3,
+            presence_penalty=0.2,
+            frequency_penalty=0.1,
             best_of=3
         )
         return response.choices[0].text.strip()
+
+    @staticmethod
+    def split_response(response_text, max_chars):
+        chunks = []
+        while len(response_text) > max_chars:
+            split_index = response_text[:max_chars].rfind(' ')
+            chunk = response_text[:split_index]
+            chunks.append(chunk)
+            response_text = response_text[split_index:].strip()
+        chunks.append(response_text)
+        return chunks
 
 def setup(bot):
     cog = ReginaldCog(bot)
