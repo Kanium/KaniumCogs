@@ -137,18 +137,23 @@ class ReginaldCog(commands.Cog):
             await ctx.author.send(f"I apologize, but I am unable to generate an image at this time. Error message: {str(e)}")
 
     async def generate_image(self, api_key, prompt):
-        openai.api_key = api_key
-        model = "image-alpha-001"  # Replace this with the appropriate DALL-E model name
-        response = openai.Image.create(
-            model=model,
-            prompt=prompt,
-            n=1,
-            size="512x512",
-            response_format="url"
-        )
+        url = "https://api.openai.com/v1/images/generations"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        }
+        data = {
+            "prompt": prompt,
+            "n": 1,
+            "size": "1024x1024",
+        }
 
-        if response and response.choices and response.choices[0].url:
-            return response.choices[0].url
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, headers=headers, data=json.dumps(data)) as resp:
+                response = await resp.json()
+
+        if response and "data" in response and len(response["data"]) > 0:
+            return response["data"][0]["url"]
         return None
 
     @reginald.error
