@@ -23,7 +23,12 @@ class ReginaldCog(commands.Cog):
 
     @commands.guild_only()
     @commands.command(help="Ask Reginald a question")
+    @commands.cooldown(1, 300, commands.BucketType.user)  # 5-minute cooldown per user
     async def reginald(self, ctx, *, prompt=None):
+        ignored_user_id = 138125632876838912
+        if ctx.author.id == ignored_user_id:
+            return
+
         greetings = [
             "Greetings! How may I be of assistance to you?",
             "Yes? How may I help?",
