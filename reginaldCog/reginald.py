@@ -164,7 +164,7 @@ class ReginaldCog(commands.Cog):
         return None
 
     @reginald.error
-    async def reginald_error(ctx, error):
+    async def reginald_error(self, ctx, error):
         if isinstance(error, commands.BadArgument):
             await ctx.send("I'm sorry, but I couldn't understand your input. Please check your message and try again.")
         elif isinstance(error, commands.CheckFailure):
@@ -173,7 +173,7 @@ class ReginaldCog(commands.Cog):
             await ctx.send(f"An unexpected error occurred: {error}")
 
     @reginaldimagine.error
-    async def reginaldimagine_error(ctx, error):
+    async def reginaldimagine_error(self, ctx, error):
         if isinstance(error, commands.BadArgument):
             await ctx.send("I'm sorry, but I couldn't understand your input. Please check your message and try again.")
         elif isinstance(error, commands.CheckFailure):
