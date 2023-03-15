@@ -1,4 +1,6 @@
-import openai
+import discord
+import json
+import openai_async as openai
 import os
 import random
 import requests
@@ -7,6 +9,7 @@ import aiohttp
 from io import BytesIO
 from PIL import Image
 from redbot.core import Config, commands
+
 
 class ReginaldCog(commands.Cog):
     def __init__(self, bot):
@@ -25,10 +28,13 @@ class ReginaldCog(commands.Cog):
             return any(role.id == kanium_role_id for role in ctx.author.roles)
         return commands.check(predicate)
 
-    def has_janitor_role():
+
+    def has_janitor_or_admin_role():
         async def predicate(ctx):
             janitor_role_id = 672156832323600396
-            return any(role.id == janitor_role_id for role in ctx.author.roles)
+            has_janitor_role = any(role.id == janitor_role_id for role in ctx.author.roles)
+            has_admin_permission = ctx.author.guild_permissions.administrator
+            return has_janitor_role or has_admin_permission
         return commands.check(predicate)
 
 
@@ -78,17 +84,18 @@ class ReginaldCog(commands.Cog):
         openai.api_key = api_key
         max_tokens = 1000
         temperature = 0.5
-        response = openai.Completion.create(
+        response = await openai.Completion.create(
             model=model,
             prompt=prompt,
             max_tokens=max_tokens,
             n=1,
             stop=None,
             temperature=temperature,
-            presence_penalty=0.2,
-            frequency_penalty=0.1,
+            presence_penalty=0.5,
+            frequency_penalty=0.5,
             best_of=3
         )
+
         return response.choices[0].text.strip()
 
     @staticmethod
@@ -103,7 +110,7 @@ class ReginaldCog(commands.Cog):
         return chunks
     
     @commands.guild_only()
-    @has_janitor_role()
+    @has_janitor_or_admin_role()
     @commands.command(help="Ask Reginald to generate an image based on a prompt")
     @commands.cooldown(1, 300, commands.BucketType.user)  # 5-minute cooldown per user
     async def reginaldimagine(self, ctx, *, prompt=None):
