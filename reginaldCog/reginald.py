@@ -174,20 +174,20 @@ class ReginaldCog(commands.Cog):
     @reginald.error
     async def reginald_error(self, ctx, error):
         if isinstance(error, commands.BadArgument):
-            await ctx.send("I'm sorry, but I couldn't understand your input. Please check your message and try again.")
+            await ctx.author.send("I'm sorry, but I couldn't understand your input. Please check your message and try again.")
         elif isinstance(error, commands.CheckFailure):
-            await ctx.send("You do not have the required role to use this command.")
+            await ctx.author.send("You do not have the required role to use this command.")
         else:
-            await ctx.send(f"An unexpected error occurred: {error}")
+            await ctx.author.send(f"An unexpected error occurred: {error}")
 
     @reginaldimagine.error
     async def reginaldimagine_error(self, ctx, error):
         if isinstance(error, commands.BadArgument):
-            await ctx.send("I'm sorry, but I couldn't understand your input. Please check your message and try again.")
+            await ctx.author.send("I'm sorry, but I couldn't understand your input. Please check your message and try again.")
         elif isinstance(error, commands.CheckFailure):
-            await ctx.send("You do not have the required role to use this command.")
+            await ctx.author.send("You do not have the required role to use this command.")
         else:
-            await ctx.send(f"An unexpected error occurred: {error}")
+            await ctx.author.send(f"An unexpected error occurred: {error}")
 
 def setup(bot):
     cog = ReginaldCog(bot)
