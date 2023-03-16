@@ -1,6 +1,6 @@
 import discord
 import json
-import openai_async as openai
+import openai
 import os
 import random
 import requests
@@ -9,6 +9,7 @@ import aiohttp
 from io import BytesIO
 from PIL import Image
 import tempfile
+from openai import OpenAIError
 from redbot.core import Config, commands
 
 
@@ -23,19 +24,19 @@ class ReginaldCog(commands.Cog):
             openai_api_key=None
         )
 
-    def has_kanium_role():
+    def has_kanium_role(self):
         async def predicate(ctx):
             kanium_role_id = 280260875678515200
             return any(role.id == kanium_role_id for role in ctx.author.roles)
         return commands.check(predicate)
 
-
-    def has_janitor_or_admin_role():
+    def has_admin_role(self):
         async def predicate(ctx):
-            janitor_role_id = 672156832323600396
-            has_janitor_role = any(role.id == janitor_role_id for role in ctx.author.roles)
+            #janitor_role_id = 672156832323600396
+            #has_janitor_role = any(role.id == janitor_role_id for role in ctx.author.roles) # Uncomment this line
             has_admin_permission = ctx.author.guild_permissions.administrator
-            return has_janitor_role or has_admin_permission
+            #return has_janitor_role or has_admin_permission
+            return has_admin_permission
         return commands.check(predicate)
 
 
@@ -74,7 +75,7 @@ class ReginaldCog(commands.Cog):
             response_text = await self.generate_response(api_key, prompt)
             for chunk in self.split_response(response_text, 2000):
                 await ctx.send(chunk)
-        except openai.error.OpenAIError as e:
+        except OpenAIError as e:
             await ctx.send(f"I apologize, but I am unable to generate a response at this time. Error message: {str(e)}")
         except commands.CommandOnCooldown as e:
             remaining_seconds = int(e.retry_after)
@@ -111,7 +112,7 @@ class ReginaldCog(commands.Cog):
         return chunks
     
     @commands.guild_only()
-    @has_janitor_or_admin_role()
+    @has_admin_role()
     @commands.command(help="Ask Reginald to generate an image based on a prompt")
     @commands.cooldown(1, 300, commands.BucketType.user)  # 5-minute cooldown per user
     async def reginaldimagine(self, ctx, *, prompt=None):
@@ -154,7 +155,7 @@ class ReginaldCog(commands.Cog):
         data = {
             "prompt": prompt,
             "n": 1,
-            "size": "1024x1024",
+            "size": "256x256",
         }
 
         async with aiohttp.ClientSession() as session:
