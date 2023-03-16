@@ -32,15 +32,23 @@ class Recruitment(commands.Cog):
     async def cog_check(self, ctx: commands.Context):
         if await ctx.bot.is_admin(ctx.author):
             return True
+
         guild_id = ctx.guild.id
         if guild_id not in self.antispam:
             self.antispam[guild_id] = AntiSpam([(datetime.timedelta(hours=1), 1)])
         antispam = self.antispam[guild_id]
+
         if antispam.spammy:
-            await ctx.send("Please wait for an hour before sending another application.")
+            try:
+                await ctx.message.delete()
+            except discord.Forbidden:
+                pass
+            await ctx.author.send("Please wait for an hour before sending your application again.")
             return False
+
         antispam.stamp()
         return True
+
 
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
