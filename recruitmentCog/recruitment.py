@@ -34,7 +34,10 @@ class Recruitment(commands.Cog):
             self.antispam[guild_id] = AntiSpam([(5, 5), (30, 10), (300, 20)])
 
         antispam = self.antispam[guild_id]
-        return not antispam.spammy(ctx)
+        if antispam.spammy(ctx):
+            return False
+
+        return True
 
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
