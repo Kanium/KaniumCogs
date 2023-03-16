@@ -30,7 +30,7 @@ class Recruitment(commands.Cog):
 
     async def cog_check(self, ctx: commands.Context):
         if ctx.guild.id not in self.antispam:
-            self.antispam[ctx.guild.id] = AntiSpam(ctx.guild)
+            self.antispam[ctx.guild.id] = AntiSpam([(5, 5), (30, 10), (300, 20)])
 
         if self.antispam[ctx.guild.id].spammy(ctx):
             return False
