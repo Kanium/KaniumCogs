@@ -13,7 +13,7 @@ def sanitize_input(input_text: str) -> str:
     """Sanitize input to remove mentions, links, and special characters."""
     sanitized_text = re.sub(r'<@!?&?(\d+)>', '', input_text)
     sanitized_text = re.sub(r'http\S+', '', sanitized_text)
-    sanitized_text = re.sub(r'([^\w\s.,?`~@#$%^&*()_+=-])', '', sanitized_text)
+    sanitized_text = re.sub(r'([^\w\s.,?!`~@#$%^&*()_+=-])', '', sanitized_text)
     return sanitized_text
 
 
@@ -32,7 +32,7 @@ class Recruitment(commands.Cog):
         if ctx.guild.id not in self.antispam:
             self.antispam[ctx.guild.id] = AntiSpam([(5, 5), (30, 10), (300, 20)])
 
-        if self.antispam[ctx.guild.id].spammy(ctx):
+        if self.antispam[ctx.guild.id].spammy(ctx=ctx):
             return False
 
         return True
