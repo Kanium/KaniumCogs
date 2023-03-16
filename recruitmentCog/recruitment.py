@@ -13,7 +13,7 @@ def sanitize_input(input_text: str) -> str:
     """Sanitize input to remove mentions, links, and special characters."""
     sanitized_text = re.sub(r'<@!?&?(\d+)>', '', input_text)
     sanitized_text = re.sub(r'http\S+', '', sanitized_text)
-    sanitized_text = re.sub(r'([^\w\s.,!?`~@#$%^&*()_+=-])', '', sanitized_text)
+    sanitized_text = re.sub(r'([^\w\s.,?`~@#$%^&*()_+=-])', '', sanitized_text)
     return sanitized_text
 
 
