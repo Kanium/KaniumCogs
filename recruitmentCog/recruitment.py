@@ -31,15 +31,13 @@ class Recruitment(commands.Cog):
     async def cog_check(self, ctx: commands.Context):
         guild_id = ctx.guild.id
         if guild_id not in self.antispam:
-            self.antispam[guild_id] = AntiSpam([(5, 5), (30, 10), (300, 20)])
-
+            self.antispam[guild_id] = AntiSpam([(timedelta(seconds=5), 5), (timedelta(minutes=1), 10), (timedelta(minutes=5), 20), (timedelta(hours=1), 30), (timedelta(hours=24), 50)])
         antispam = self.antispam[guild_id]
-        antispam.update(ctx)
-        if antispam.spam_count:
+        if antispam.spammy:
+            await ctx.send("Please wait a while before sending your application.")
             return False
-
+        antispam.stamp()
         return True
-
 
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
