@@ -29,13 +29,16 @@ class Recruitment(commands.Cog):
         self.antispam = {}
 
     async def cog_check(self, ctx: commands.Context):
-        if ctx.guild.id not in self.antispam:
-            self.antispam[ctx.guild.id] = AntiSpam([(5, 5), (30, 10), (300, 20)])
+        guild_id = ctx.guild.id
+        if guild_id not in self.antispam:
+            self.antispam[guild_id] = AntiSpam([(5, 5), (30, 10), (300, 20)])
 
-        if self.antispam[ctx.guild.id].spammy(ctx=ctx):
+        antispam = self.antispam[guild_id]
+        if antispam.spammy(ctx):
             return False
 
         return True
+
 
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
