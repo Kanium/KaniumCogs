@@ -24,13 +24,13 @@ class ReginaldCog(commands.Cog):
             openai_api_key=None
         )
 
-    def has_kanium_role(self):
+    def has_kanium_role():
         async def predicate(ctx):
             kanium_role_id = 280260875678515200
             return any(role.id == kanium_role_id for role in ctx.author.roles)
         return commands.check(predicate)
 
-    def has_admin_role(self):
+    def has_admin_role():
         async def predicate(ctx):
             #janitor_role_id = 672156832323600396
             #has_janitor_role = any(role.id == janitor_role_id for role in ctx.author.roles) # Uncomment this line
