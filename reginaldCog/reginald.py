@@ -9,7 +9,6 @@ import aiohttp
 from io import BytesIO
 from PIL import Image
 import tempfile
-import asyncio
 from openai import OpenAIError
 from redbot.core import Config, commands
 
@@ -84,26 +83,27 @@ class ReginaldCog(commands.Cog):
 
     async def generate_response(self, api_key, prompt):
         model = await self.config.openai_model()
-        openai.api_key = api_key
-        max_tokens = 1000
-        temperature = 0.5
-        loop = asyncio.get_event_loop()
+        url = f"https://api.openai.com/v1/engines/{model}/completions"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        }
+        data = {
+            "prompt": prompt,
+            "max_tokens": 1000,
+            "n": 1,
+            "stop": None,
+            "temperature": 0.5,
+            "presence_penalty": 0.5,
+            "frequency_penalty": 0.5,
+            "best_of": 3,
+        }
 
-        response = await loop.run_in_executor(
-            None,
-            openai.Completion.create,
-            model=model,
-            prompt=prompt,
-            max_tokens=max_tokens,
-            n=1,
-            stop=None,
-            temperature=temperature,
-            presence_penalty=0.5,
-            frequency_penalty=0.5,
-            best_of=3,
-        )
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, headers=headers, json=data) as resp:
+                response = await resp.json()
 
-        return response.choices[0].text.strip()
+        return response['choices'][0]['text'].strip()
 
     @staticmethod
     def split_response(response_text, max_chars):
