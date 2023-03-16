@@ -9,6 +9,7 @@ import aiohttp
 from io import BytesIO
 from PIL import Image
 import tempfile
+import asyncio
 from openai import OpenAIError
 from redbot.core import Config, commands
 
@@ -86,7 +87,11 @@ class ReginaldCog(commands.Cog):
         openai.api_key = api_key
         max_tokens = 1000
         temperature = 0.5
-        response = await openai.Completion.create(
+        loop = asyncio.get_event_loop()
+
+        response = await loop.run_in_executor(
+            None,
+            openai.Completion.create,
             model=model,
             prompt=prompt,
             max_tokens=max_tokens,
@@ -95,7 +100,7 @@ class ReginaldCog(commands.Cog):
             temperature=temperature,
             presence_penalty=0.5,
             frequency_penalty=0.5,
-            best_of=3
+            best_of=3,
         )
 
         return response.choices[0].text.strip()
