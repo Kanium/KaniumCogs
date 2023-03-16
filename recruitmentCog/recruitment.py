@@ -2,6 +2,7 @@ import asyncio
 import datetime
 import re
 from typing import List
+from datetime import timedelta
 
 import discord
 from redbot.core import Config, checks, commands
