@@ -30,12 +30,14 @@ class Recruitment(commands.Cog):
         self.antispam = {}
 
     async def cog_check(self, ctx: commands.Context):
+        if await ctx.bot.is_admin(ctx.author):
+            return True
         guild_id = ctx.guild.id
         if guild_id not in self.antispam:
-            self.antispam[guild_id] = AntiSpam([(timedelta(seconds=5), 5), (timedelta(minutes=1), 10), (timedelta(minutes=5), 20), (timedelta(hours=1), 30), (timedelta(hours=24), 50)])
+            self.antispam[guild_id] = AntiSpam([(datetime.timedelta(hours=1), 1)])
         antispam = self.antispam[guild_id]
         if antispam.spammy:
-            await ctx.send("Please wait a while before sending your application.")
+            await ctx.send("Please wait for an hour before sending another application.")
             return False
         antispam.stamp()
         return True
