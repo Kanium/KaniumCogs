@@ -43,7 +43,7 @@ class Recruitment(commands.Cog):
                 await ctx.message.delete()
             except discord.Forbidden:
                 pass
-            await ctx.author.send("Please wait for an hour before sending your application again.")
+            await ctx.author.send("Please wait for an hour before sending another application.")
             return False
 
         antispam.stamp()
