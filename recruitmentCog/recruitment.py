@@ -1,10 +1,20 @@
 import asyncio
-from typing import List
 import datetime
+import re
+from typing import List
+
 import discord
 from redbot.core import Config, checks, commands
-from redbot.core.utils.antispam import AntiSpam
 from redbot.core.bot import Red
+from redbot.core.utils.antispam import AntiSpam
+
+
+def sanitize_input(input_text: str) -> str:
+    """Sanitize input to remove mentions, links, and special characters."""
+    sanitized_text = re.sub(r'<@!?&?(\d+)>', '', input_text)
+    sanitized_text = re.sub(r'http\S+', '', sanitized_text)
+    sanitized_text = re.sub(r'([^\w\s.,!?`~@#$%^&*()_+=-])', '', sanitized_text)
+    return sanitized_text
 
 
 class Recruitment(commands.Cog):
@@ -13,10 +23,19 @@ class Recruitment(commands.Cog):
     def __init__(self, bot: Red):
         self.bot = bot
         self.message: str = ''
-        self.config = Config.get_conf(self, identifier=101101101101001110101) # Replace with your own unique identifier
+        self.config = Config.get_conf(self, identifier=101101101101001110101)  # Replace with your own unique identifier
         default_guild = {"guild_id": 274657393936302080, "application_channel_id": None}
         self.config.register_guild(**default_guild)
+        self.antispam = {}
 
+    async def cog_check(self, ctx: commands.Context):
+        if ctx.guild.id not in self.antispam:
+            self.antispam[ctx.guild.id] = AntiSpam(ctx.guild)
+
+        if self.antispam[ctx.guild.id].spammy(ctx):
+            return False
+
+        return True
 
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
@@ -37,9 +56,14 @@ class Recruitment(commands.Cog):
         await self.config.guild(guild).clear_raw("application_channel_id")
         await ctx.send("Application channel cleared.")
 
-
     @commands.group(name="application", usage="[text]", invoke_without_command=True)
     async def application(self, ctx: commands.Context, *, _application: str = ""):
+        # Input validation and sanitization for _application
+        _application = sanitize_input(_application)
+        if len(_application) > 2000:
+            await ctx.send("Your application is too long. Please limit it to 2000 characters.")
+            return
+
         guild_id = await self.get_guild_id(ctx)
         guild = discord.utils.get(self.bot.guilds, id=guild_id)
         if guild is None:
