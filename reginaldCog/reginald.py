@@ -160,7 +160,7 @@ class ReginaldCog(commands.Cog):
         data = {
             "prompt": prompt,
             "n": 1,
-            "size": "256x256",
+            "size": "512x512",
         }
 
         async with aiohttp.ClientSession() as session:
