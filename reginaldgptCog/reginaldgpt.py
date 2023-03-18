@@ -6,14 +6,16 @@ import openai
 class ReginaldGptCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.bot = bot
         self.config = Config.get_conf(self, identifier=71717171171717)
-        openai.api_key = os.environ["OPENAI_API_KEY"]
+        self.config.register_global(api_key=None)
 
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def reginaldgpt(self, ctx, *, message):
         try:
+            api_key = await self.config.api_key()
+            openai.api_key = api_key
+
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=[
@@ -32,6 +34,14 @@ class ReginaldGptCog(commands.Cog):
 
         except Exception as e:
             await ctx.send("As an AI robot, I errored out.")
+
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    @commands.command()
+    async def setreginaldgptapikey(self, ctx, api_key):
+        await self.config.api_key.set(api_key)
+        openai.api_key = api_key
+        await ctx.send("ReginaldGpt API key has been set.")
 
 def setup(bot):
     cog = ReginaldGptCog(bot)
