@@ -1,11 +1,13 @@
-import os
 import discord
+import os
 from redbot.core import Config, checks, commands
 import openai
 
 class ReginaldGptCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.bot = bot
+        self.config = Config.get_conf(self, identifier=71717171171717)
         openai.api_key = os.environ["OPENAI_API_KEY"]
 
     @commands.guild_only()
@@ -32,4 +34,5 @@ class ReginaldGptCog(commands.Cog):
             await ctx.send("As an AI robot, I errored out.")
 
 def setup(bot):
-    bot.add_cog(ReginaldGptCog(bot))
+    cog = ReginaldGptCog(bot)
+    bot.add_cog(cog)
