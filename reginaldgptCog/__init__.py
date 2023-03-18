@@ -1,5 +1,5 @@
 from redbot.core.bot import Red
-from .reginaldgpt import ReginaldGptCog
+from .reginaldgptCog import ReginaldGptCog
 
 def setup(bot: Red):
     cog = ReginaldGptCog(bot)
