@@ -52,16 +52,13 @@ class ReginaldCog(commands.Cog):
     @commands.command(help="Ask Reginald a question")
     @commands.cooldown(1, 60, commands.BucketType.user)  # 1-minute cooldown per user
     async def reginald(self, ctx, *, prompt=None):
-        ignored_user_id = 138125632876838912
-        if ctx.author.id == ignored_user_id:
-            return
-
         greetings = [
             "Greetings! How may I be of assistance to you?",
             "Yes? How may I help?",
             "Good day! How can I help you?",
             "You rang? What can I do for you?",
         ]
+
         if prompt is None:
             await ctx.send(random.choice(greetings))
             return
@@ -121,9 +118,6 @@ class ReginaldCog(commands.Cog):
     @commands.command(help="Ask Reginald to generate an image based on a prompt")
     @commands.cooldown(1, 300, commands.BucketType.user)  # 5-minute cooldown per user
     async def reginaldimagine(self, ctx, *, prompt=None):
-        ignored_user_id = 138125632876838912
-        if ctx.author.id == ignored_user_id:
-            return
 
         if prompt is None:
             await ctx.author.send("Please provide a prompt for the image.")
