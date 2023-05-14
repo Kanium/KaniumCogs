@@ -103,7 +103,7 @@ class ReginaldCog(commands.Cog):
             async with session.post(url, headers=headers, json=data) as resp:
                 response = await resp.json()
 
-        return response['choices'][0]['message'][0]['content'].strip()
+        return response['choices'][0]['message']['content'].strip()
 
     @staticmethod
     def split_response(response_text, max_chars):
