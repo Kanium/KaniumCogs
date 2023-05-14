@@ -89,7 +89,6 @@ class ReginaldCog(commands.Cog):
             temperature= 0.8,
             presence_penalty= 0.5,
             frequency_penalty= 0.5,
-            best_of= 1,
             messages=[
             {"role": "system", "content": "You are Reginald, the butler. You aim to help everyone, however you can, and you always respond in a dignified and refined manner."},
             {"role": "user", "content": prompt}
