@@ -78,30 +78,22 @@ class ReginaldCog(commands.Cog):
             remaining_seconds = int(e.retry_after)
             await ctx.author.send(f'Please wait {remaining_seconds} seconds before using the "reginald" command again.')
 
-    async def generate_response(self, api_key, prompt):
+async def generate_response(self, api_key, prompt):
         model = await self.config.openai_model()
-        url = f"https://api.openai.com/v1/chat/completions"
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-        }
-        data = {
-            "model": model,
-            "messages": [
-                {"system": "You are Reginald, the butler. You aim to help anyone however you can, and speak in a refined manner.", "content": prompt}
-            ],
-            "max_tokens": 1000,
-            "n": 1,
-            "stop": None,
-            "temperature": 0.5,
-            "presence_penalty": 0.5,
-            "frequency_penalty": 0.5,
-            "best_of": 1
-        }
-
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, headers=headers, json=data) as resp:
-                response = await resp.json()
+        openai.api_key = api_key
+        response = openai.ChatCompletion.create(
+            model= model,
+            max_tokens= 512,
+            n= 1,
+            stop= None,
+            temperature= 0.8,
+            presence_penalty= 0.5,
+            frequency_penalty= 0.5,
+            best_of= 1,
+            messages=[
+            {"role": "system", "content": "You are Reginald, the butler. You aim to help everyone, however you can, and you always respond in a dignified and refined manner."},
+            {"role": "user", "content": prompt}
+            ]
 
         return response['choices'][0]['message']['content'].strip()
 
