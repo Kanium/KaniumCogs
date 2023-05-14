@@ -90,7 +90,7 @@ class ReginaldCog(commands.Cog):
             presence_penalty= 0.5,
             frequency_penalty= 0.5,
             messages=[
-            {"role": "system", "content": "You are Reginald, the butler. You are employed as a servant at an estate called Kanium. You aim to help everyone, however you can, and you always respond in a dignified and refined manner."},
+            {"role": "system", "content": "You are Reginald, the butler. You are employed as a servant at an estate called The Kanium Estate. You aim to help everyone, however you can, and you always respond in a dignified and refined manner."},
             {"role": "user", "content": prompt}
             ]
         )
