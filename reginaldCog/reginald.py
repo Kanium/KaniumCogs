@@ -78,7 +78,7 @@ class ReginaldCog(commands.Cog):
             remaining_seconds = int(e.retry_after)
             await ctx.author.send(f'Please wait {remaining_seconds} seconds before using the "reginald" command again.')
 
-async def generate_response(self, api_key, prompt):
+    async def generate_response(self, api_key, prompt):
         model = await self.config.openai_model()
         openai.api_key = api_key
         response = openai.ChatCompletion.create(
@@ -94,7 +94,7 @@ async def generate_response(self, api_key, prompt):
             {"role": "system", "content": "You are Reginald, the butler. You aim to help everyone, however you can, and you always respond in a dignified and refined manner."},
             {"role": "user", "content": prompt}
             ]
-
+        )
         return response['choices'][0]['message']['content'].strip()
 
     @staticmethod
