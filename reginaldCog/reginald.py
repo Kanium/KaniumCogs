@@ -18,7 +18,7 @@ class ReginaldCog(commands.Cog):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=71717171171717)
         self.config.register_global(
-            openai_model="text-davinci-002"
+            openai_model="gpt-3.5-turbo"
         )
         self.config.register_guild(
             openai_api_key=None
@@ -80,27 +80,30 @@ class ReginaldCog(commands.Cog):
 
     async def generate_response(self, api_key, prompt):
         model = await self.config.openai_model()
-        url = f"https://api.openai.com/v1/engines/{model}/completions"
+        url = f"https://api.openai.com/v1/chat/completions"
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {api_key}",
         }
         data = {
-            "prompt": prompt,
+            "model": model,
+            "messages": [
+                {"system": "You are Reginald, the butler. You aim to help anyone however you can, and speak in a refined manner.", "content": prompt}
+            ],
             "max_tokens": 1000,
             "n": 1,
             "stop": None,
             "temperature": 0.5,
             "presence_penalty": 0.5,
             "frequency_penalty": 0.5,
-            "best_of": 3,
+            "best_of": 1
         }
 
         async with aiohttp.ClientSession() as session:
             async with session.post(url, headers=headers, json=data) as resp:
                 response = await resp.json()
 
-        return response['choices'][0]['text'].strip()
+        return response['choices'][0]['message'][0]['content'].strip()
 
     @staticmethod
     def split_response(response_text, max_chars):
