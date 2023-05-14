@@ -50,7 +50,7 @@ class ReginaldCog(commands.Cog):
     @commands.guild_only()
     @has_kanium_role()
     @commands.command(help="Ask Reginald a question")
-    @commands.cooldown(1, 60, commands.BucketType.user)  # 1-minute cooldown per user
+    @commands.cooldown(1, 10, commands.BucketType.user)  # 10 second cooldown per user
     async def reginald(self, ctx, *, prompt=None):
         greetings = [
             "Greetings! How may I be of assistance to you?",
@@ -86,11 +86,11 @@ class ReginaldCog(commands.Cog):
             max_tokens= 512,
             n= 1,
             stop= None,
-            temperature= 0.8,
+            temperature= 0.7,
             presence_penalty= 0.5,
             frequency_penalty= 0.5,
             messages=[
-            {"role": "system", "content": "You are Reginald, the butler. You aim to help everyone, however you can, and you always respond in a dignified and refined manner."},
+            {"role": "system", "content": "You are Reginald, the butler. You are employed as a servant at an estate called Kanium. You aim to help everyone, however you can, and you always respond in a dignified and refined manner."},
             {"role": "user", "content": prompt}
             ]
         )
