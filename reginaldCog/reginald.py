@@ -34,13 +34,9 @@ class ReginaldCog(commands.Cog):
 
     def has_admin_role():
         async def predicate(ctx):
-            #janitor_role_id = 672156832323600396
-            #has_janitor_role = any(role.id == janitor_role_id for role in ctx.author.roles) # Uncomment this line
             has_admin_permission = ctx.author.guild_permissions.administrator
-            #return has_janitor_role or has_admin_permission
             return has_admin_permission
         return commands.check(predicate)
-
 
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
