@@ -40,7 +40,7 @@ class Recruitment(commands.Cog):
 
         if antispam.spammy:
             try:
-                await ctx.message.delete()
+                await ctx.message.delete(delay=0)
             except discord.Forbidden:
                 pass
             await ctx.author.send("Please wait for an hour before sending another application.")
@@ -184,7 +184,7 @@ class Recruitment(commands.Cog):
         trial_end_date = (datetime.datetime.now() + datetime.timedelta(days=30)).strftime("%Y-%m-%d")
 
         embed = discord.Embed(title=f"Application from {author.name}#{author.discriminator}", color=discord.Color.green())
-        embed.set_thumbnail(url=author.avatar_url)
+        embed.set_thumbnail(url=author.avatar.url)
         embed.add_field(name="Name", value=answers[0])
         embed.add_field(name="Age", value=answers[1])
         embed.add_field(name="Country", value=answers[2])
@@ -224,5 +224,5 @@ class Recruitment(commands.Cog):
     async def get_answers(self, author: discord.Member) -> discord.Message:
         """Wait for the user to send a message."""
         return await self.bot.wait_for(
-            "message", check=lambda m: m.author == author and m.guild is None
+            "message", lambda m: m.author == author and m.guild is None
         )   
