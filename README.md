@@ -4,3 +4,5 @@
 ## Our Cogs:
 - [WelcomeCog](./welcomeCog)
 - [TrafficCog](./trafficCog)
+- [recruitmentCog](./recruitmentCog/)
+- [reginaldCog](./reginaldCog/)
