@@ -1,6 +1,6 @@
 from redbot.core.bot import Red
 from .reginald import ReginaldCog
 
-def setup(bot: Red):
+async def setup(bot: Red):
     cog = ReginaldCog(bot)
-    bot.add_cog(cog)
+    await bot.add_cog(cog)

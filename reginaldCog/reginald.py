@@ -17,12 +17,14 @@ class ReginaldCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=71717171171717)
-        self.config.register_global(
-            openai_model="gpt-3.5-turbo"
-        )
-        self.config.register_guild(
-            openai_api_key=None
-        )
+        default_global = {
+            "openai_model": "gpt-3.5-turbo"
+        }
+        default_guild = {
+            "openai_api_key": None
+        }
+        self.config.register_global(**default_global)
+        self.config.register_guild(**default_guild)
 
     def has_kanium_role():
         async def predicate(ctx):
