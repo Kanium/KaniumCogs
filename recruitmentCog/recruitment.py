@@ -223,6 +223,4 @@ class Recruitment(commands.Cog):
 
     async def get_answers(self, author: discord.Member) -> discord.Message:
         """Wait for the user to send a message."""
-        return await self.bot.wait_for(
-            "message", lambda m: m.author == author and m.guild is None
-        )   
+        return await self.bot.wait_for("message", check=lambda m: m.author == author and isinstance(m.channel, discord.DMChannel))
