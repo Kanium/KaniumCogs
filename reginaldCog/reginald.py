@@ -12,6 +12,11 @@ import tempfile
 from openai import OpenAIError
 from redbot.core import Config, commands
 
+def role_check():
+    async def predicate(ctx):
+        cog = ctx.bot.get_cog("ReginaldCog")
+        return await cog.has_admin_role(ctx) or await cog.has_allowed_role(ctx)
+    return commands.check(predicate)
 
 class ReginaldCog(commands.Cog):
     def __init__(self, bot):
@@ -69,7 +74,7 @@ class ReginaldCog(commands.Cog):
         await ctx.send("OpenAI API key set successfully.")
 
     @commands.guild_only()
-    @commands.check(role_check())
+    @role_check()  # Use role_check without parentheses
     @commands.command(help="Ask Reginald a question")
     @commands.cooldown(1, 10, commands.BucketType.user)  # 10 second cooldown per user
     async def reginald(self, ctx, *, prompt=None):
