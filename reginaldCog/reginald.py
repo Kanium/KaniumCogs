@@ -26,17 +26,34 @@ class ReginaldCog(commands.Cog):
         self.config.register_global(**default_global)
         self.config.register_guild(**default_guild)
 
-    def has_allowed_role():
-        async def predicate(ctx):
-            kanium_role_id = 280260875678515200
-            return any(role.id == kanium_role_id for role in ctx.author.roles)
-        return commands.check(predicate)
+    async def has_admin_role(self, ctx):
+        return ctx.author.guild_permissions.administrator
 
-    def has_admin_role():
-        async def predicate(ctx):
-            has_admin_permission = ctx.author.guild_permissions.administrator
-            return has_admin_permission
-        return commands.check(predicate)
+    async def has_allowed_role(self, ctx):
+        allowed_roles = await self.config.guild(ctx.guild).allowed_roles()
+        return any(role.id in allowed_roles for role in ctx.author.roles)
+    
+    @commands.guild_only()
+    @commands.command(name="reginald_allowrole", help="Allow a role to use the Reginald command")
+    async def allowrole(self, ctx, role: discord.Role):
+        if not await self.has_admin_role(ctx):
+            await ctx.send("You do not have the required permissions to use this command.")
+            return
+        async with self.config.guild(ctx.guild).allowed_roles() as allowed_roles:
+            if role.id not in allowed_roles:
+                allowed_roles.append(role.id)
+        await ctx.send(f"Role {role.name} is now allowed to use the Reginald command.")
+    
+    @commands.guild_only()
+    @commands.command(name="reginald_disallowrole", help="Remove a role's ability to use the Reginald command")
+    async def disallowrole(self, ctx, role: discord.Role):
+        if not await self.has_admin_role(ctx):
+            await ctx.send("You do not have the required permissions to use this command.")
+            return
+        async with self.config.guild(ctx.guild).allowed_roles() as allowed_roles:
+            if role.id in allowed_roles:
+                allowed_roles.remove(role.id)
+        await ctx.send(f"Role {role.name} is no longer allowed to use the Reginald command.")
 
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
