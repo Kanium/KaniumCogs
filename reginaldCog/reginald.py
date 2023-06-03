@@ -32,13 +32,13 @@ class ReginaldCog(commands.Cog):
 
         self.allowed_role_id = int(config['DEFAULT']['allowed_role_id'])
 
-    def has_allowed_role(self):
-        async def predicate(ctx):
-            return any(role.id == self.allowed_role_id for role in ctx.author.roles)
+    def has_allowed_role():
+        def predicate(ctx):
+            return any(role.id == ctx.cog.allowed_role_id for role in ctx.author.roles)
         return commands.check(predicate)
 
-    def has_admin_role(self):
-        async def predicate(ctx):
+    def has_admin_role():
+        def predicate(ctx):
             has_admin_permission = ctx.author.guild_permissions.administrator
             return has_admin_permission
         return commands.check(predicate)
@@ -52,7 +52,7 @@ class ReginaldCog(commands.Cog):
         await ctx.send("OpenAI API key set successfully.")
 
     @commands.guild_only()
-    @self.has_allowed_role()
+    @has_allowed_role()
     @commands.command(help="Ask Reginald a question")
     @commands.cooldown(1, 10, commands.BucketType.user)  # 10 second cooldown per user
     async def reginald(self, ctx, *, prompt=None):
@@ -112,7 +112,7 @@ class ReginaldCog(commands.Cog):
         return chunks
     
     @commands.guild_only()
-    @self.has_admin_role()
+    @has_admin_role()
     @commands.command(help="Ask Reginald to generate an image based on a prompt")
     @commands.cooldown(1, 300, commands.BucketType.user)  # 5-minute cooldown per user
     async def reginaldimagine(self, ctx, *, prompt=None):
