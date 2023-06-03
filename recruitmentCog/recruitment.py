@@ -3,6 +3,7 @@ import datetime
 import re
 from typing import List
 from datetime import timedelta
+import configparser
 
 import discord
 from redbot.core import Config, checks, commands
@@ -24,9 +25,18 @@ class Recruitment(commands.Cog):
     def __init__(self, bot: Red):
         self.bot = bot
         self.message: str = ''
-        self.config = Config.get_conf(self, identifier=101101101101001110101)  # Replace with your own unique identifier
-        default_guild = {"guild_id": 274657393936302080, "application_channel_id": None}
+        config = configparser.ConfigParser()
+        config.read('config.ini')
+
+        identifier_id = int(config['DEFAULT']['identifier_id'])
+        self.config = Config.get_conf(self, identifier=identifier_id) 
+
+        self.guild_id = int(config['DEFAULT']['guild_id'])
+        self.trial_role_id = int(config['DEFAULT']['trial_role_id'])
+        
+        default_guild = {"guild_id": self.guild_id, "application_channel_id": None}
         self.config.register_guild(**default_guild)
+
         self.antispam = {}
 
     async def cog_check(self, ctx: commands.Context):
@@ -163,7 +173,7 @@ class Recruitment(commands.Cog):
             return
 
         # Assign the Trial role to the author
-        role = guild.get_role(531181363420987423)
+        role = guild.get_role(self.trial_role_id)
         try:
             await member.add_roles(role)
         except discord.Forbidden:
