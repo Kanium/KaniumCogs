@@ -26,7 +26,7 @@ class ReginaldCog(commands.Cog):
         self.config.register_global(**default_global)
         self.config.register_guild(**default_guild)
 
-    async def has_admin_role(self, ctx):
+    def has_admin_role(self, ctx):
         return ctx.author.guild_permissions.administrator
 
     async def has_allowed_role(self, ctx):
