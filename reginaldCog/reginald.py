@@ -61,7 +61,7 @@ class ReginaldCog(commands.Cog):
         await ctx.send("OpenAI API key set successfully.")
 
     @commands.guild_only()
-    @commands.check_any(commands.check(is_admin), commands.check(is_allowed))
+    @commands.check_any(is_admin, is_allowed)
     @commands.command(help="Ask Reginald a question")
     @commands.cooldown(1, 10, commands.BucketType.user)  # 10 second cooldown per user
     async def reginald(self, ctx, *, prompt=None):
