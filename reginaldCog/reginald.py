@@ -56,8 +56,10 @@ class ReginaldCog(commands.Cog):
             else:
                 await ctx.send(f"The {role.name} role is not currently allowed to use the Reginald command.")
     
-    def role_check(self, ctx):
-        return self.has_admin_role(ctx) or self.has_allowed_role(ctx)
+    def role_check(self):
+        async def predicate(ctx):
+            return await self.has_admin_role(ctx) or await self.has_allowed_role(ctx)
+        return commands.check(predicate)
 
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
@@ -67,7 +69,7 @@ class ReginaldCog(commands.Cog):
         await ctx.send("OpenAI API key set successfully.")
 
     @commands.guild_only()
-    @commands.check(role_check)
+    @commands.check(role_check())
     @commands.command(help="Ask Reginald a question")
     @commands.cooldown(1, 10, commands.BucketType.user)  # 10 second cooldown per user
     async def reginald(self, ctx, *, prompt=None):
