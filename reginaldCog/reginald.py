@@ -13,9 +13,9 @@ from openai import OpenAIError
 from redbot.core import Config, commands
 
 def role_check():
-    async def predicate(ctx):
+    def predicate(ctx):
         cog = ctx.bot.get_cog("ReginaldCog")
-        return await cog.has_admin_role(ctx) or await cog.has_allowed_role(ctx)
+        return cog.has_admin_role(ctx) or cog.has_allowed_role(ctx)
     return commands.check(predicate)
 
 class ReginaldCog(commands.Cog):
