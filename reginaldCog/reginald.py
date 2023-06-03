@@ -9,6 +9,7 @@ import aiohttp
 from io import BytesIO
 from PIL import Image
 import tempfile
+import configparser
 from openai import OpenAIError
 from redbot.core import Config, commands
 
