@@ -61,10 +61,11 @@ class ReginaldCog(commands.Cog):
         await ctx.send("OpenAI API key set successfully.")
 
     @commands.guild_only()
-    @commands.check_any(commands.check(is_admin), commands.check(is_allowed))
     @commands.command(help="Ask Reginald a question")
     @commands.cooldown(1, 10, commands.BucketType.user)  # 10 second cooldown per user
     async def reginald(self, ctx, *, prompt=None):
+        if not await self.is_admin(ctx) and not await self.is_allowed(ctx):
+            raise commands.CheckFailure("You do not have the required role to use this command.")
         greetings = [
             "Greetings! How may I be of assistance to you?",
             "Yes? How may I help?",
