@@ -16,7 +16,11 @@ from redbot.core import Config, commands
 class ReginaldCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.config = Config.get_conf(self, identifier=71717171171717)
+        config = configparser.ConfigParser()
+        config.read('config.ini')
+
+        identifier_id = int(config['DEFAULT']['identifier_id'])
+        self.config = Config.get_conf(self, identifier=identifier_id)
         default_global = {
             "openai_model": "gpt-3.5-turbo"
         }
@@ -26,17 +30,19 @@ class ReginaldCog(commands.Cog):
         self.config.register_global(**default_global)
         self.config.register_guild(**default_guild)
 
-    def has_kanium_role():
+        self.allowed_role_id = int(config['DEFAULT']['allowed_role_id'])
+
+    def has_allowed_role(self):
         async def predicate(ctx):
-            kanium_role_id = 280260875678515200
-            return any(role.id == kanium_role_id for role in ctx.author.roles)
+            return any(role.id == self.allowed_role_id for role in ctx.author.roles)
         return commands.check(predicate)
 
-    def has_admin_role():
+    def has_admin_role(self):
         async def predicate(ctx):
             has_admin_permission = ctx.author.guild_permissions.administrator
             return has_admin_permission
         return commands.check(predicate)
+
 
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
@@ -46,7 +52,7 @@ class ReginaldCog(commands.Cog):
         await ctx.send("OpenAI API key set successfully.")
 
     @commands.guild_only()
-    @has_kanium_role()
+    @self.has_allowed_role()
     @commands.command(help="Ask Reginald a question")
     @commands.cooldown(1, 10, commands.BucketType.user)  # 10 second cooldown per user
     async def reginald(self, ctx, *, prompt=None):
@@ -106,7 +112,7 @@ class ReginaldCog(commands.Cog):
         return chunks
     
     @commands.guild_only()
-    @has_admin_role()
+    @self.has_admin_role()
     @commands.command(help="Ask Reginald to generate an image based on a prompt")
     @commands.cooldown(1, 300, commands.BucketType.user)  # 5-minute cooldown per user
     async def reginaldimagine(self, ctx, *, prompt=None):
