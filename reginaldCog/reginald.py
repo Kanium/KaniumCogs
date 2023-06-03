@@ -12,11 +12,6 @@ import tempfile
 from openai import OpenAIError
 from redbot.core import Config, commands
 
-def role_check():
-    def predicate(ctx):
-        cog = ctx.bot.get_cog("ReginaldCog")
-        return cog.has_admin_role(ctx) or cog.has_allowed_role(ctx)
-    return commands.check(predicate)
 
 class ReginaldCog(commands.Cog):
     def __init__(self, bot):
@@ -31,40 +26,32 @@ class ReginaldCog(commands.Cog):
         self.config.register_global(**default_global)
         self.config.register_guild(**default_guild)
 
-    def has_admin_role(self, ctx):
+    async def is_admin(self, ctx):
+        admin_role = await self.config.guild(ctx.guild).admin_role()
+        if admin_role:
+            return discord.utils.get(ctx.author.roles, name=admin_role) is not None
         return ctx.author.guild_permissions.administrator
 
-    async def has_allowed_role(self, ctx):
-        allowed_roles = await self.config.guild(ctx.guild).allowed_roles()
-        return any(role.id in allowed_roles for role in ctx.author.roles)
+    async def is_allowed(self, ctx):
+        allowed_role = await self.config.guild(ctx.guild).allowed_role()
+        if allowed_role:
+            return discord.utils.get(ctx.author.roles, name=allowed_role) is not None
+        return False
     
     @commands.command(name="reginald_allowrole", help="Allow a role to use the Reginald command")
     @commands.has_permissions(administrator=True)
     async def allow_role(self, ctx, role: discord.Role):
-        """Allows a role to use the reginald command"""
-        async with self.config.guild(ctx.guild).allowed_roles() as allowed_roles:
-            if role.id not in allowed_roles:
-                allowed_roles.append(role.id)
-                await ctx.send(f"The {role.name} role is now allowed to use the Reginald command.")
-            else:
-                await ctx.send(f"The {role.name} role is already allowed to use the Reginald command.")
+            """Allows a role to use the Reginald command"""
+            await self.config.guild(ctx.guild).allowed_role.set(role.name)
+            await ctx.send(f"The {role.name} role is now allowed to use the Reginald command.")
 
     
     @commands.command(name="reginald_disallowrole", help="Remove a role's ability to use the Reginald command")
     @commands.has_permissions(administrator=True)
-    async def disallow_role(self, ctx, role: discord.Role):
-        """Revokes a role's permission to use the reginald command"""
-        async with self.config.guild(ctx.guild).allowed_roles() as allowed_roles:
-            if role.id in allowed_roles:
-                allowed_roles.remove(role.id)
-                await ctx.send(f"The {role.name} role is no longer allowed to use the Reginald command.")
-            else:
-                await ctx.send(f"The {role.name} role is not currently allowed to use the Reginald command.")
-    
-    def role_check(self):
-        async def predicate(ctx):
-            return await self.has_admin_role(ctx) or await self.has_allowed_role(ctx)
-        return commands.check(predicate)
+    async def disallow_role(self, ctx):
+        """Revokes a role's permission to use the Reginald command"""
+        await self.config.guild(ctx.guild).allowed_role.clear()
+        await ctx.send(f"The role's permission to use the Reginald command has been revoked.")
 
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
@@ -74,7 +61,7 @@ class ReginaldCog(commands.Cog):
         await ctx.send("OpenAI API key set successfully.")
 
     @commands.guild_only()
-    @role_check()  # Use role_check without parentheses
+    @commands.check_any(commands.check(is_admin), commands.check(is_allowed))
     @commands.command(help="Ask Reginald a question")
     @commands.cooldown(1, 10, commands.BucketType.user)  # 10 second cooldown per user
     async def reginald(self, ctx, *, prompt=None):
