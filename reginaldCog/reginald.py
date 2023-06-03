@@ -33,7 +33,7 @@ class ReginaldCog(commands.Cog):
         allowed_roles = await self.config.guild(ctx.guild).allowed_roles()
         return any(role.id in allowed_roles for role in ctx.author.roles)
     
-    @commands.command(name="allowrole")
+    @commands.command(name="reginald_allowrole", help="Allow a role to use the Reginald command")
     @commands.has_permissions(administrator=True)
     async def allow_role(self, ctx, role: discord.Role):
         """Allows a role to use the reginald command"""
@@ -45,7 +45,7 @@ class ReginaldCog(commands.Cog):
                 await ctx.send(f"The {role.name} role is already allowed to use the Reginald command.")
 
     
-    @commands.command(name="disallowrole")
+    @commands.command(name="reginald_disallowrole", help="Remove a role's ability to use the Reginald command")
     @commands.has_permissions(administrator=True)
     async def disallow_role(self, ctx, role: discord.Role):
         """Revokes a role's permission to use the reginald command"""
@@ -56,11 +56,8 @@ class ReginaldCog(commands.Cog):
             else:
                 await ctx.send(f"The {role.name} role is not currently allowed to use the Reginald command.")
     
-    def role_check():
-        async def predicate(ctx):
-            allowed_roles = await ctx.bot.get_cog("ReginaldCog").config.guild(ctx.guild).allowed_roles()
-            return any(role.id in allowed_roles for role in ctx.author.roles)
-        return commands.check(predicate)
+    def role_check(self, ctx):
+        return self.has_admin_role(ctx) or self.has_allowed_role(ctx)
 
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
@@ -70,7 +67,7 @@ class ReginaldCog(commands.Cog):
         await ctx.send("OpenAI API key set successfully.")
 
     @commands.guild_only()
-    @role_check()
+    @commands.check(role_check)
     @commands.command(help="Ask Reginald a question")
     @commands.cooldown(1, 10, commands.BucketType.user)  # 10 second cooldown per user
     async def reginald(self, ctx, *, prompt=None):
