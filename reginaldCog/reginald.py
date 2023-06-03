@@ -9,7 +9,6 @@ import aiohttp
 from io import BytesIO
 from PIL import Image
 import tempfile
-import configparser
 from openai import OpenAIError
 from redbot.core import Config, commands
 
@@ -17,11 +16,7 @@ from redbot.core import Config, commands
 class ReginaldCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        config = configparser.ConfigParser()
-        config.read('config.ini')
-
-        identifier_id = int(config['DEFAULT']['identifier_id'])
-        self.config = Config.get_conf(self, identifier=identifier_id)
+        self.config = Config.get_conf(self, identifier=71717171171717)
         default_global = {
             "openai_model": "gpt-3.5-turbo"
         }
@@ -31,19 +26,17 @@ class ReginaldCog(commands.Cog):
         self.config.register_global(**default_global)
         self.config.register_guild(**default_guild)
 
-        self.allowed_role_id = int(config['DEFAULT']['allowed_role_id'])
-
     def has_allowed_role():
-        def predicate(ctx):
-            return any(role.id == ctx.cog.allowed_role_id for role in ctx.author.roles)
+        async def predicate(ctx):
+            kanium_role_id = 280260875678515200
+            return any(role.id == kanium_role_id for role in ctx.author.roles)
         return commands.check(predicate)
 
     def has_admin_role():
-        def predicate(ctx):
+        async def predicate(ctx):
             has_admin_permission = ctx.author.guild_permissions.administrator
             return has_admin_permission
         return commands.check(predicate)
-
 
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
