@@ -2,5 +2,7 @@
  cogs made for our Royal butt.
 
 ## Our Cogs:
-- [WelcomeCog](./welcomeCog)
+- [RecruitmentCog](./recruitmentCog/)
+- [ReginaldCog](./reginaldCog/)
 - [TrafficCog](./trafficCog)
+- [WelcomeCog](./welcomeCog)
