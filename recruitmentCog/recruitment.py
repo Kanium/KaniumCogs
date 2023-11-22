@@ -28,15 +28,28 @@ class Recruitment(commands.Cog):
         default_guild = {"guild_id": 274657393936302080, "application_channel_id": None}
         self.config.register_guild(**default_guild)
         self.antispam = {}
+        self.cog_check_enabled = True  # Attribute to track the state of cog_check
 
     async def cog_check(self, ctx: commands.Context):
         if await ctx.bot.is_admin(ctx.author):
             return True
+        
+        if not self.cog_check_enabled:
+            return True  # If disabled, always return True to allow all commands
 
         guild_id = ctx.guild.id
+        author_id = ctx.author.id  # Get the ID of the user who invoked the command
+
+        # Check if the guild has an antispam entry, if not, create one
         if guild_id not in self.antispam:
-            self.antispam[guild_id] = AntiSpam([(datetime.timedelta(hours=1), 1)])
-        antispam = self.antispam[guild_id]
+            self.antispam[guild_id] = {}
+
+        # Check if the user has an antispam entry in this guild, if not, create one
+        if author_id not in self.antispam[guild_id]:
+            self.antispam[guild_id][author_id] = AntiSpam([(datetime.timedelta(hours=1), 1)])
+    
+        # Get the antispam object for this specific user in this guild
+        antispam = self.antispam[guild_id][author_id]
 
         if antispam.spammy:
             try:
@@ -49,6 +62,13 @@ class Recruitment(commands.Cog):
         antispam.stamp()
         return True
 
+    @commands.command(name="togglecogcheck")
+    @checks.is_owner()  # Or use any other appropriate check
+    async def toggle_cog_check(self, ctx: commands.Context):
+        """Toggle the cog_check functionality on or off."""
+        self.cog_check_enabled = not self.cog_check_enabled
+        status = "enabled" if self.cog_check_enabled else "disabled"
+        await ctx.send(f"Cog check has been {status}.")
 
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
