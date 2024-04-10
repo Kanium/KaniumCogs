@@ -1,119 +1,95 @@
 import discord
-from datetime import datetime
-
-from redbot.core import Config, commands
-
-allowed_guilds = {274657393936302080, 693796372092289024, 508781789737648138}
-admin_roles = {'Developer', 'admin', 'Council'}
-statsThumbnailUrl = 'https://www.kanium.org/machineroom/logomachine-small.png'
+from discord.ext import commands
+from datetime import datetime, timedelta
+import pytz
 
 class TrafficCog(commands.Cog):
-
     def __init__(self, bot):
-        self.channel: discord.TextChannel = None
-        self.dailyJoinedCount: int = 0
-        self.totalJoinedCount: int = 0
-        self.dailyLeftCount: int = 0
-        self.totalLeftCount: int = 0
-        self.totalLogs: int = 0
-        self.toggleLogs: bool = True
-        self.date = datetime.now()
+        self.bot = bot
+        self.config = commands.Config.get_conf(self, identifier=123456789)
+        default_guild = {
+            "traffic_channel": None,
+            "daily_stats": {"joined": 0, "left": 0, "banned": 0},
+            "total_stats": {"joined": 0, "left": 0, "banned": 0},
+            "last_reset": datetime.now(pytz.UTC).isoformat(),
+            "admin_roles": ['Developer', 'admin', 'Council'],
+            "stats_thumbnail_url": 'https://example.com/default-thumbnail.png',
+        }
+        self.config.register_guild(**default_guild)
 
-    def __checkClock(self):
-        currdate = self.date - datetime.now()
-        if currdate.days >= 0 :
-            self.dailyJoinedCount = 0
-            self.dailyLeftCount = 0
-            self.date = datetime.now()
+    async def __check_reset(self, guild_id):
+        async with self.config.guild_from_id(guild_id).all() as guild_data:
+            last_reset = datetime.fromisoformat(guild_data['last_reset'])
+            if last_reset.date() < datetime.now(pytz.UTC).date():
+                guild_data['daily_stats'] = {"joined": 0, "left": 0, "banned": 0}
+                guild_data['last_reset'] = datetime.now(pytz.UTC).isoformat()
 
-    @commands.command(name='settrafficchannel', description='Sets the channel to sends log to')
-    @commands.has_any_role(*admin_roles)
-    async def setTrafficChannel(self, ctx: commands.Context, channel: discord.TextChannel) -> None:
-        await ctx.trigger_typing()
+    async def __update_stat(self, guild_id, stat_type):
+        async with self.config.guild_from_id(guild_id).all() as guild_data:
+            guild_data['daily_stats'][stat_type] += 1
+            guild_data['total_stats'][stat_type] += 1
 
-        if not channel in ctx.guild.channels:
-            await ctx.send('Channel doesnt exist in guild')
+    @commands.group(name='traffic', invoke_without_command=True)
+    @commands.has_permissions(administrator=True)
+    async def traffic_commands(self, ctx):
+        """Base command for managing TrafficCog settings."""
+        await ctx.send_help(ctx.command)
+
+    @traffic_commands.command(name='setchannel')
+    async def set_traffic_channel(self, ctx, channel: discord.TextChannel):
+        """Sets the channel for traffic logs."""
+        await self.config.guild(ctx.guild).traffic_channel.set(channel.id)
+        await ctx.send(f"Traffic logs will now be sent to {channel.mention}.")
+
+    @traffic_commands.command(name='stats')
+    async def show_stats(self, ctx):
+        """Displays current traffic statistics."""
+        await self.__check_reset(ctx.guild.id)
+        guild_data = await self.config.guild(ctx.guild).all()
+        daily_stats = guild_data['daily_stats']
+        total_stats = guild_data['total_stats']
+
+        embed = discord.Embed(title="Server Traffic Stats", description="Statistics on server activity", color=0x3399ff)
+        embed.set_thumbnail(url=guild_data['stats_thumbnail_url'])
+        embed.add_field(name="Daily Joined", value=daily_stats['joined'], inline=True)
+        embed.add_field(name="Daily Left", value=daily_stats['left'], inline=True)
+        embed.add_field(name="Daily Banned", value=daily_stats['banned'], inline=True)
+        embed.add_field(name="Total Joined", value=total_stats['joined'], inline=True)
+        embed.add_field(name="Total Left", value=total_stats['left'], inline=True)
+        embed.add_field(name="Total Banned", value=total_stats['banned'], inline=True)
+        await ctx.send(embed=embed)
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member):
+        if member.guild.id not in self.config.all_guilds():
             return
-
-        if not channel.permissions_for(ctx.guild.me).send_messages:
-            await ctx.send('No permissions to talk in that channel.')
-            return
-
-        self.channel = channel
-
-        await ctx.send(f'I will now send event notices to {channel.mention}.')
-
-    @commands.command(name='stats', description='Shows current statistics')
-    @commands.has_any_role(*admin_roles)
-    async def statistics(self, ctx: commands.Context) -> None:
-        self.__checkClock()
-        await ctx.trigger_typing()
-        message = discord.Embed(title='Server Traffic Stats', description='Statistics on server activity\n\n',color=0x3399ff)
-        message.set_thumbnail(url=statsThumbnailUrl)
-        message.add_field(name='Daily Joined', value=self.dailyJoinedCount, inline='True')
-        message.add_field(name='Daily Left', value='{0}\n'.format(self.dailyLeftCount), inline='True')
-        message.add_field(name='Total Traffic', value=self.totalLogs, inline='False')
-        message.add_field(name='Total Joined', value=self.totalJoinedCount, inline='True')
-        message.add_field(name='Total Left', value=self.totalLeftCount, inline='True')
-        await ctx.send(content=None, embed=message)
-
-    @commands.command(name='resetstats', description='Resets statistics')
-    @commands.has_any_role(*admin_roles)
-    async def resetStatistics(self, ctx: commands.Context) -> None:
-        await ctx.trigger_typing()
-
-        self.dailyJoinedCount = 0
-        self.dailyLeftCount = 0
-        self.totalJoinedCount = 0
-        self.totalLeftCount = 0
-        self.totalLogs = 0
-
-        await ctx.send('Successfully reset the statistics')
-
-    @commands.command(name='toggleLogs', description='Toggles the logs functionality on or off')
-    @commands.has_any_role(*admin_roles)
-    async def toggleLogs(self, ctx: commands.Context) -> None:
-        await ctx.trigger_typing()
-        self.toggleLogs = not self.toggleLogs
-        await ctx.send('Logging functionality is `ON`' if self.toggleLogs else 'Logging functionality is `OFF`')
+        await self.__check_reset(member.guild.id)
+        await self.__update_stat(member.guild.id, 'joined')
+        channel_id = await self.config.guild(member.guild).traffic_channel()
+        if channel_id:
+            channel = member.guild.get_channel(channel_id)
+            if channel:
+                await channel.send(f"{member.display_name} has joined the server.")
 
     @commands.Cog.listener()
-    async def on_member_join(self, member: discord.Member) -> None:
-        try:
-            if member.guild.id not in allowed_guilds:
-                return
-            self.__checkClock()
-            if self.channel in member.guild.channels and self.toggleLogs:
-                await self.channel.send('{0} has joined the server'.format(member.name))
-            self.totalJoinedCount += 1
-            self.dailyJoinedCount += 1
-            self.totalLogs += 1
-        except (discord.NotFound, discord.Forbidden):
-            print(
-                f'Error Occured!')
+    async def on_member_remove(self, member):
+        await self.__check_reset(member.guild.id)
+        await self.__update_stat(member.guild.id, 'left')
+        channel_id = await self.config.guild(member.guild).traffic_channel()
+        if channel_id:
+            channel = member.guild.get_channel(channel_id)
+            if channel:
+                await channel.send(f"{member.display_name} has left the server.")
 
     @commands.Cog.listener()
-    async def on_member_remove(self, member: discord.Member) -> None:
-        try:
-            self.__checkClock()
-            if self.channel in member.guild.channels and self.toggleLogs:
-                await self.channel.send('{0} has left the server'.format(member.name))
-            self.totalLeftCount += 1
-            self.dailyLeftCount += 1
-            self.totalLogs += 1
-        except (discord.NotFound, discord.Forbidden):
-            print(
-                f'Error Occured!')
+    async def on_member_ban(self, guild, member):
+        await self.__check_reset(guild.id)
+        await self.__update_stat(guild.id, 'banned')
+        channel_id = await self.config.guild(guild).traffic_channel()
+        if channel_id:
+            channel = guild.get_channel(channel_id)
+            if channel:
+                await channel.send(f"{member.display_name} has been banned from the server.")
 
-    @commands.Cog.listener()
-    async def on_member_ban(self, guild: discord.Guild, member: discord.Member) -> None:
-        try:
-            self.__checkClock()
-            if self.channel in member.guild.channels and self.toggleLogs:
-                await self.channel.send('{0} has been banned from the server'.format(member.name))
-            self.totalLeftCount += 1
-            self.dailyLeftCount += 1
-            self.totalLogs += 1
-        except (discord.NotFound, discord.Forbidden):
-            print(
-                f'Error Occured!')
+def setup(bot):
+    bot.add_cog(TrafficCog(bot))
