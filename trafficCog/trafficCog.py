@@ -1,6 +1,5 @@
 import discord
-from redbot.core import Config, commands  # Import Config from redbot.core
-from discord.ext import commands
+from redbot.core import Config, commands  # This line imports commands as well
 from datetime import datetime, timedelta
 import pytz
 
