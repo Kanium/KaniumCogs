@@ -1,6 +1,6 @@
 from redbot.core.bot import Red
 from .trafficCog import TrafficCog
 
-def setup(bot):
+async def setup(bot: Red):
     cog = TrafficCog(bot)
-    bot.add_cog(cog)
+    await bot.add_cog(cog)

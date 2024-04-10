@@ -92,4 +92,5 @@ class TrafficCog(commands.Cog):
                 await channel.send(f"{member.display_name} has been banned from the server.")
 
 def setup(bot):
-    bot.add_cog(TrafficCog(bot))
+    cog = TrafficCog(bot)
+    bot.add_cog(cog)
