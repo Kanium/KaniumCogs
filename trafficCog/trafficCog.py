@@ -6,7 +6,7 @@ import pytz
 class TrafficCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.config = commands.Config.get_conf(self, identifier=123456789)
+        self.config = Config.get_conf(self, identifier=123456789, force_registration=True)
         default_guild = {
             "traffic_channel": None,
             "daily_stats": {"joined": 0, "left": 0, "banned": 0},

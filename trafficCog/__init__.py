@@ -1,3 +1,4 @@
+from redbot.core.bot import Red
 from .trafficCog import TrafficCog
 
 def setup(bot):
