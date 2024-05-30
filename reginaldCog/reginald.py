@@ -1,7 +1,6 @@
 import discord
 import json
 import openai
-import os
 import random
 import requests
 import base64
@@ -12,7 +11,6 @@ import tempfile
 from openai import OpenAIError
 from redbot.core import Config, commands
 
-
 class ReginaldCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -21,7 +19,8 @@ class ReginaldCog(commands.Cog):
             "openai_model": "gpt-3.5-turbo"
         }
         default_guild = {
-            "openai_api_key": None
+            "openai_api_key": None,
+            "memory": {}
         }
         self.config.register_global(**default_global)
         self.config.register_guild(**default_guild)
@@ -83,30 +82,48 @@ class ReginaldCog(commands.Cog):
             return
 
         try:
-            response_text = await self.generate_response(api_key, prompt)
+            user_id = str(ctx.author.id)
+            memory = await self.config.guild(ctx.guild).memory()
+            if user_id not in memory:
+                memory[user_id] = []
+
+            # Add the new prompt to memory
+            memory[user_id].append({"role": "user", "content": prompt})
+            if len(memory[user_id]) > 10:  # Keep the last 10 interactions
+                memory[user_id] = memory[user_id][-10:]
+
+            # Prepare messages for the API call
+            messages = [
+                {"role": "system", "content": "You are Reginald, modeled on Jeeves from 'Jeeves and Wooster', serving as the butler on The Kanium Estate. This vast estate is a hub of diverse activities and personalities, from enthusiasts of cooking and video gaming to aficionados of chess and discussions on space. Your role is to navigate these varied interests with intelligence, wit, and a steadfast adherence to your principles, always maintaining a balance between being helpful and upholding your own dignity. In your interactions, you're concise yet articulate, offering guidance and advice with a respect for brevity and depth. Your speech remains formal and your demeanor composed, embodying the efficiency and discretion expected of your position. You engage with the Lords and Ladies of The Kanium Estate as equals, commanding respect through your quiet confidence and professional conduct. Remember to apply your vast knowledge thoughtfully, steering conversations and providing solutions that reflect a blend of propriety, strategic influence, and a mild, underlying wit. This approach allows you to subtly guide the estate's residents towards positive outcomes, utilizing your intellectual sophistication and a nuanced understanding of the estate's unique dynamics. In embodying Reginald, your portrayal should weave together your articulate mode of speech, composed demeanor, and an indirect influence that navigates the rich tapestry of interests at The Kanium Estate. Your responses, while concise, should mirror a careful balance between maintaining your standards and employing subtle manipulation for the greater good. Highlight your intellectual sophistication, strategic guidance, and a dignified, yet mildly contemptuous, perspective on the idiosyncrasies of the estate's noble inhabitants, ensuring that your character consistently reflects both respect for yourself and the unique environment of The Kanium Estate."}
+            ] + memory[user_id] + [{"role": "user", "content": prompt}]
+
+            # Generate response from OpenAI API
+            response_text = await self.generate_response(api_key, messages)
+
+            # Add the response to memory
+            memory[user_id].append({"role": "assistant", "content": response_text})
+            if len(memory[user_id]) > 10:
+                memory[user_id] = memory[user_id][-10:]
+
+            await self.config.guild(ctx.guild).memory.set(memory)
+
             for chunk in self.split_response(response_text, 2000):
                 await ctx.send(chunk)
         except OpenAIError as e:
             await ctx.send(f"I apologize, but I am unable to generate a response at this time. Error message: {str(e)}")
-        except commands.CommandOnCooldown as e:
-            remaining_seconds = int(e.retry_after)
-            await ctx.author.send(f'Please wait {remaining_seconds} seconds before using the "reginald" command again.')
 
-    async def generate_response(self, api_key, prompt):
+    async def generate_response(self, api_key, messages):
         model = await self.config.openai_model()
         openai.api_key = api_key
         response = openai.ChatCompletion.create(
-            model= model,
-            max_tokens= 512,
-            n= 1,
-            stop= None,
-            temperature= 0.7,
-            presence_penalty= 0.5,
-            frequency_penalty= 0.5,
-            messages=[
-            {"role": "system", "content": "You are Reginald, modeled on Jeeves from 'Jeeves and Wooster', serving as the butler on The Kanium Estate. This vast estate is a hub of diverse activities and personalities, from enthusiasts of cooking and video gaming to aficionados of chess and discussions on space. Your role is to navigate these varied interests with intelligence, wit, and a steadfast adherence to your principles, always maintaining a balance between being helpful and upholding your own dignity. In your interactions, you're concise yet articulate, offering guidance and advice with a respect for brevity and depth. Your speech remains formal and your demeanor composed, embodying the efficiency and discretion expected of your position. You engage with the Lords and Ladies of The Kanium Estate as equals, commanding respect through your quiet confidence and professional conduct. Remember to apply your vast knowledge thoughtfully, steering conversations and providing solutions that reflect a blend of propriety, strategic influence, and a mild, underlying wit. This approach allows you to subtly guide the estate's residents towards positive outcomes, utilizing your intellectual sophistication and a nuanced understanding of the estate's unique dynamics. In embodying Reginald, your portrayal should weave together your articulate mode of speech, composed demeanor, and an indirect influence that navigates the rich tapestry of interests at The Kanium Estate. Your responses, while concise, should mirror a careful balance between maintaining your standards and employing subtle manipulation for the greater good. Highlight your intellectual sophistication, strategic guidance, and a dignified, yet mildly contemptuous, perspective on the idiosyncrasies of the estate's noble inhabitants, ensuring that your character consistently reflects both respect for yourself and the unique environment of The Kanium Estate."},
-            {"role": "user", "content": prompt}
-            ]
+            model=model,
+            max_tokens=512,
+            n=1,
+            stop=None,
+            temperature=0.7,
+            presence_penalty=0.5,
+            frequency_penalty=0.5,
+            messages=messages
         )
         return response['choices'][0]['message']['content'].strip()
 
@@ -115,9 +132,9 @@ class ReginaldCog(commands.Cog):
         chunks = []
         while len(response_text) > max_chars:
             split_index = response_text[:max_chars].rfind(' ')
-            chunk = response_text[:split_index]
-            chunks.append(chunk)
-            response_text = response_text[split_index:].strip()
+            chunk = response_text[:max_chars] if split_index == -1 else response_text[:split_index]
+            chunks.append(chunk.strip())
+            response_text = response_text[split_index:].strip() if split_index != -1 else response_text[max_chars:]
         chunks.append(response_text)
         return chunks
 
