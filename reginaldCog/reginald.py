@@ -117,7 +117,7 @@ class ReginaldCog(commands.Cog):
         openai.api_key = api_key
         response = openai.ChatCompletion.create(
             model=model,
-            max_tokens=512,
+            max_tokens=1024,  # Increase max_tokens for more detailed responses
             n=1,
             stop=None,
             temperature=0.7,
