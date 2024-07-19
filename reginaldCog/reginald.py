@@ -16,7 +16,7 @@ class ReginaldCog(commands.Cog):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=71717171171717)
         default_global = {
-            "openai_model": "gpt-3.5-turbo"
+            "openai_model": "gpt-4o-mini"
         }
         default_guild = {
             "openai_api_key": None,
