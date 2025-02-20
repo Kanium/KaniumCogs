@@ -10,13 +10,13 @@ class ReginaldCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=71717171171717)
-        self.memory_locks = {}
+        self.memory_locks = {}  # ✅ Prevents race conditions per channel
 
         # ✅ Properly Registered Configuration Keys
         default_global = {"openai_model": "gpt-4o-mini"}
         default_guild = {
             "openai_api_key": None,
-            "memory": {},
+            "memory": {},  # Memory now tracks by channel
             "admin_role": None,
             "allowed_role": None
         }
@@ -35,10 +35,10 @@ class ReginaldCog(commands.Cog):
         allowed_role_id = await self.config.guild(ctx.guild).allowed_role()
         return any(role.id == allowed_role_id for role in ctx.author.roles) if allowed_role_id else False
 
-    @commands.command(name="reginald", help="Ask Reginald a question")
+    @commands.command(name="reginald", help="Ask Reginald a question in shared channels")
     @commands.cooldown(1, 10, commands.BucketType.user)
     async def reginald(self, ctx, *, prompt=None):
-        """Handles direct interactions with Reginald, ensuring per-user memory tracking."""
+        """Handles multi-user memory tracking in shared channels"""
         
         if not await self.is_admin(ctx) and not await self.is_allowed(ctx):
             await ctx.send("You do not have the required role to use this command.")
@@ -53,37 +53,34 @@ class ReginaldCog(commands.Cog):
             await ctx.send("OpenAI API key not set. Use `!setreginaldcogapi`.")
             return
 
-        user_id = str(ctx.author.id)
+        channel_id = str(ctx.channel.id)  # ✅ Track memory per-channel
 
-        # ✅ Ensure only one update per user at a time
-        if user_id not in self.memory_locks:
-            self.memory_locks[user_id] = asyncio.Lock()
+        # ✅ Ensure only one update per channel at a time
+        if channel_id not in self.memory_locks:
+            self.memory_locks[channel_id] = asyncio.Lock()
 
-        async with self.memory_locks[user_id]:  # ✅ Prevent race conditions
-            # ✅ Fetch Memory Per-User (using async transaction)
+        async with self.memory_locks[channel_id]:  # ✅ Prevent race conditions
             async with self.config.guild(ctx.guild).memory() as guild_memory:
-                memory = guild_memory.get(user_id, [])
+                memory = guild_memory.get(channel_id, [])
 
-                messages = [
-                    {"role": "system", "content": (
-                        "You are Reginald, modeled on Jeeves from 'Jeeves and Wooster', serving as the butler on The Kanium Estate. "
-                        "This vast estate is a hub of diverse activities and personalities, from enthusiasts of cooking and video gaming "
-                        "to aficionados of chess and discussions on space. Your role is to navigate these varied interests with intelligence, "
-                        "wit, and a steadfast adherence to your principles, always maintaining a balance between being helpful and upholding "
-                        "your own dignity. Your responses, while concise, should mirror a careful balance between maintaining your standards and employing subtle manipulation for the greater good."
-                    )}
-                ] + memory + [{"role": "user", "content": prompt}]
+                # ✅ Attach the user's display name to the message
+                user_name = ctx.author.display_name  # Uses Discord nickname if available
+                memory.append({"user": user_name, "content": prompt})
+                memory = memory[-50:]  # Keep only last 50 messages
 
-                response_text = await self.generate_response(api_key, messages)
+                # ✅ Format messages with usernames
+                formatted_messages = [{"role": "system", "content": (
+                    "You are Reginald, the esteemed butler of The Kanium Estate. "
+                    "The estate is home to Lords, Ladies, and distinguished guests, each with unique personalities and demands. "
+                    "Your duty is to uphold decorum while providing assistance with wit and intelligence. "
+                    "You must always recognize the individual names of those speaking and reference them when responding."
+                )}] + [{"role": "user", "content": f"{entry['user']}: {entry['content']}"} for entry in memory]
 
-                # ✅ Store conversation history correctly (while lock is held)
-                memory.append({"role": "user", "content": prompt})
-                memory.append({"role": "assistant", "content": response_text})
-                memory = memory[-25:]
+                response_text = await self.generate_response(api_key, formatted_messages)
 
-                guild_memory[user_id] = memory  # ✅ Atomic update inside async context
-
-            del self.memory_locks[user_id]  # ✅ Clean up lock to prevent memory leaks
+                # ✅ Store Reginald's response in memory
+                memory.append({"user": "Reginald", "content": response_text})
+                guild_memory[channel_id] = memory  # ✅ Atomic update inside async context
 
         await ctx.send(response_text[:2000])  # Discord character limit safeguard
 
@@ -137,7 +134,6 @@ class ReginaldCog(commands.Cog):
         """Allows an admin to set the OpenAI API key for Reginald."""
         await self.config.guild(ctx.guild).openai_api_key.set(api_key)
         await ctx.send("OpenAI API key set successfully.")
-
 
 async def setup(bot):
     """✅ Correct async cog setup for Redbot"""
