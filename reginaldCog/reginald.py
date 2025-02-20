@@ -3,7 +3,7 @@ import openai
 import random
 import asyncio
 from redbot.core import Config, commands
-from openai.error import OpenAIError
+from openai import OpenAIError
 
 class ReginaldCog(commands.Cog):
     def __init__(self, bot):
