@@ -16,13 +16,14 @@ class ReginaldCog(commands.Cog):
         default_global = {"openai_model": "gpt-4o-mini"}
         default_guild = {
             "openai_api_key": None,
-            "memory": {},  # Memory now tracks by channel
+            "short_term_memory": {},  # Tracks last 100 messages per channel
+            "mid_term_memory": {},  # Stores condensed summaries
+            "long_term_profiles": {},  # Stores persistent knowledge
             "admin_role": None,
             "allowed_role": None
         }
         self.config.register_global(**default_global)
         self.config.register_guild(**default_guild)
-
     async def is_admin(self, ctx):
         """✅ Checks if the user is an admin (or has an assigned admin role)."""
         admin_role_id = await self.config.guild(ctx.guild).admin_role()
@@ -54,6 +55,8 @@ class ReginaldCog(commands.Cog):
             return
 
         channel_id = str(ctx.channel.id)
+        user_id = str(ctx.author.id)
+        user_name = ctx.author.display_name  # Uses Discord nickname if available
 
         # ✅ Convert mentions into readable names
         for mention in ctx.message.mentions:
@@ -64,35 +67,76 @@ class ReginaldCog(commands.Cog):
             self.memory_locks[channel_id] = asyncio.Lock()
 
         async with self.memory_locks[channel_id]:  # ✅ Prevent race conditions
-            async with self.config.guild(ctx.guild).memory() as guild_memory:
-                memory = guild_memory.get(channel_id, [])
+            async with self.config.guild(ctx.guild).short_term_memory() as short_memory, \
+                       self.config.guild(ctx.guild).mid_term_memory() as mid_memory, \
+                       self.config.guild(ctx.guild).long_term_profiles() as long_memory:
 
-                # ✅ Attach the user's display name to the message
-                user_name = ctx.author.display_name  # Uses Discord nickname if available
-                memory.append({"user": user_name, "content": prompt})
-                memory = memory[-50:]  # Keep only last 50 messages
+                # ✅ Retrieve memory
+                memory = short_memory.get(channel_id, [])
+                user_profile = long_memory.get(user_id, {})
 
-                # ✅ Format messages with usernames
+                # ✅ Format messages properly
                 formatted_messages = [{"role": "system", "content": (
                     "You are Reginald, the esteemed butler of The Kanium Estate. "
-                    "The estate is home to Lords, Ladies, and distinguished guests, each with unique personalities and demands. "
+                    "This estate is home to Lords, Ladies, and distinguished guests, each with unique personalities and demands. "
                     "Your duty is to uphold decorum while providing assistance with wit and intelligence. "
-                    "You must always recognize the individual names of those speaking and reference them when responding."
-                )}] + [{"role": "user", "content": f"{entry['user']}: {entry['content']}"} for entry in memory]
+                    "You should recognize individual names and use them sparingly. Prefer natural conversation flow—do not force names where unnecessary."
+                )}]
 
+                # ✅ Add long-term knowledge if available
+                if user_profile:
+                    knowledge_summary = f"Previous knowledge about {user_name}: {user_profile.get('summary', 'No detailed memory yet.')}"
+                    formatted_messages.append({"role": "system", "content": knowledge_summary})
+
+                # ✅ Add recent conversation history
+                formatted_messages += [{"role": "user", "content": f"{entry['user']}: {entry['content']}"} for entry in memory]
+                formatted_messages.append({"role": "user", "content": f"{user_name}: {prompt}"})
+
+                # ✅ Generate response
                 response_text = await self.generate_response(api_key, formatted_messages)
 
-                # ✅ Store Reginald's response in memory
-                memory.append({"user": "Reginald", "content": response_text})
-                guild_memory[channel_id] = memory  # ✅ Atomic update inside async context
+                # ✅ Store new messages in memory
+                memory.append({"user": user_name, "content": prompt})  # Store user message
+                memory.append({"user": "Reginald", "content": response_text})  # Store response
+
+                # ✅ Keep memory within limit
+                if len(memory) > 100:
+                    summary = await self.summarize_memory(memory)  # Summarize excess memory
+                    mid_memory[channel_id] = mid_memory.get(channel_id, "") + "\n" + summary  # Store in Mid-Term Memory
+                    memory = memory[-100:]  # Prune old memory
+
+                short_memory[channel_id] = memory  # ✅ Atomic update inside async context
 
         await ctx.send(response_text[:2000])  # Discord character limit safeguard
+
+    async def summarize_memory(self, messages):
+        """✅ Generates a summary of past conversations for mid-term storage."""
+        summary_prompt = (
+        "Analyze and summarize the following conversation in a way that retains key details, nuances, and unique insights. "
+        "Your goal is to create a structured yet fluid summary that captures important points without oversimplifying. "
+        "Maintain resolution on individual opinions, preferences, debates, and shared knowledge. "
+        "If multiple topics are discussed, summarize each distinctly rather than blending them together."
+        )
+
+        summary_text = "\n".join(f"{msg['user']}: {msg['content']}" for msg in messages)
+
+        try:
+            client = openai.AsyncClient(api_key=await self.config.openai_model())
+            response = await client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "system", "content": summary_prompt}, {"role": "user", "content": summary_text}],
+                max_tokens=256
+            )
+            return response.choices[0].message.content.strip()
+        except OpenAIError:
+            return "Summary unavailable due to an error."
+
 
     async def generate_response(self, api_key, messages):
         """✅ Generates a response using OpenAI's new async API client (OpenAI v1.0+)."""
         model = await self.config.openai_model()
         try:
-            client = openai.AsyncOpenAI(api_key=api_key)  # ✅ Correct API usage
+            client = openai.AsyncClient(api_key=api_key)  # ✅ Correct API usage
             response = await client.chat.completions.create(
                 model=model,
                 messages=messages,
