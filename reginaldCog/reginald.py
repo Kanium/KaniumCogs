@@ -162,6 +162,72 @@ class ReginaldCog(commands.Cog):
             ]
             return random.choice(reginald_responses)
 
+    @commands.command(name="reginald_clear_short", help="Clears short-term memory for this channel.")
+    @commands.has_permissions(administrator=True)
+    async def clear_short_memory(self, ctx):
+        async with self.config.guild(ctx.guild).short_term_memory() as short_memory:
+            short_memory[ctx.channel.id] = []
+        await ctx.send("Short-term memory for this channel has been cleared.")
+
+    @commands.command(name="reginald_clear_mid", help="Clears mid-term memory (summarized logs).")
+    @commands.has_permissions(administrator=True)
+    async def clear_mid_memory(self, ctx):
+        async with self.config.guild(ctx.guild).mid_term_memory() as mid_memory:
+            mid_memory[ctx.channel.id] = ""
+        await ctx.send("Mid-term memory for this channel has been cleared.")
+
+    @commands.command(name="reginald_clear_long", help="Clears all long-term stored knowledge.")
+    @commands.has_permissions(administrator=True)
+    async def clear_long_memory(self, ctx):
+        async with self.config.guild(ctx.guild).long_term_profiles() as long_memory:
+            long_memory.clear()
+        await ctx.send("All long-term memory has been erased.")
+
+    @commands.command(name="reginald_reset_all", help="Completely resets all memory.")
+    @commands.has_permissions(administrator=True)
+    async def reset_all_memory(self, ctx):
+        async with self.config.guild(ctx.guild).short_term_memory() as short_memory:
+            short_memory.clear()
+        async with self.config.guild(ctx.guild).mid_term_memory() as mid_memory:
+            mid_memory.clear()
+        async with self.config.guild(ctx.guild).long_term_profiles() as long_memory:
+            long_memory.clear()
+        await ctx.send("All memory has been completely reset.")
+
+    @commands.command(name="reginald_memory_status", help="Displays a memory usage summary.")
+    async def memory_status(self, ctx):
+        async with self.config.guild(ctx.guild).short_term_memory() as short_memory, \
+                   self.config.guild(ctx.guild).mid_term_memory() as mid_memory, \
+                   self.config.guild(ctx.guild).long_term_profiles() as long_memory:
+            
+            short_count = sum(len(v) for v in short_memory.values())
+            mid_count = sum(len(v) for v in mid_memory.values())
+            long_count = len(long_memory)
+
+        status_message = (
+            f"📊 **Memory Status:**\n"
+            f"- **Short-Term Messages Stored:** {short_count}\n"
+            f"- **Mid-Term Summaries Stored:** {mid_count}\n"
+            f"- **Long-Term Profiles Stored:** {long_count}\n"
+        )
+        await ctx.send(status_message)
+
+    @commands.command(name="reginald_recall", help="Recalls what Reginald knows about a user.")
+    async def recall_user(self, ctx, user: discord.User):
+        async with self.config.guild(ctx.guild).long_term_profiles() as long_memory:
+            profile = long_memory.get(str(user.id), {}).get("summary", "No stored information on this user.")
+        await ctx.send(f"📜 **Memory Recall for {user.display_name}:** {profile}")
+
+    @commands.command(name="reginald_forget", help="Forgets a specific user's long-term profile.")
+    @commands.has_permissions(administrator=True)
+    async def forget_user(self, ctx, user: discord.User):
+        async with self.config.guild(ctx.guild).long_term_profiles() as long_memory:
+            if str(user.id) in long_memory:
+                del long_memory[str(user.id)]
+                await ctx.send(f"Reginald has forgotten all stored information about {user.display_name}.")
+            else:
+                await ctx.send(f"No stored knowledge about {user.display_name} to delete.")
+
     @commands.command(name="reginald_allowrole", help="Allow a role to use the Reginald command")
     @commands.has_permissions(administrator=True)
     async def allow_role(self, ctx, role: discord.Role):
