@@ -278,6 +278,12 @@ class ReginaldCog(commands.Cog):
         self.short_term_memory_limit = limit
         await ctx.send(f"✅ Short-term memory limit set to {limit} messages.")
 
+    @commands.command(name="reginald_memory_limit", help="Displays the current short-term memory message limit.")
+    async def get_short_term_memory_limit(self, ctx):
+        """Displays the current short-term memory limit."""
+        await ctx.send(f"📏 **Current Short-Term Memory Limit:** {self.short_term_memory_limit} messages.")
+
+
 async def setup(bot):
     """✅ Correct async cog setup for Redbot"""
     await bot.add_cog(ReginaldCog(bot))
