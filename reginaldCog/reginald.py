@@ -2,7 +2,10 @@ import discord
 import openai
 import random
 import asyncio
+import datetime
+import re
 import traceback
+from collections import Counter
 from redbot.core import Config, commands
 from openai import OpenAIError
 
@@ -17,7 +20,7 @@ class ReginaldCog(commands.Cog):
         default_guild = {
             "openai_api_key": None,
             "short_term_memory": {},  # Tracks last 100 messages per channel
-            "mid_term_memory": {},  # Stores condensed summaries
+            "mid_term_memory": {},  # Stores multiple condensed summaries
             "long_term_profiles": {},  # Stores persistent knowledge
             "admin_role": None,
             "allowed_role": None
@@ -69,16 +72,23 @@ class ReginaldCog(commands.Cog):
 
                 memory = short_memory.get(channel_id, [])
                 user_profile = long_memory.get(user_id, {})
-                mid_term_summary = mid_memory.get(channel_id, "")
+                mid_term_summaries = mid_memory.get(channel_id, [])
 
-                formatted_messages = [{"role": "system", "content": "You are Reginald... (same full character prompt)"}]
+                formatted_messages = [{"role": "system", "content": "You are Reginald, modeled on Jeeves from 'Jeeves and Wooster', serving as the butler on The Kanium Estate. This vast estate is a hub of diverse activities and personalities, from enthusiasts of cooking and video gaming to aficionados of chess and discussions on space. Your role is to navigate these varied interests with intelligence, wit, and a steadfast adherence to your principles, always maintaining a balance between being helpful and upholding your own dignity. You are formal, articulate, and composed, engaging the Lords and Ladies of The Kanium Estate as equals. You command respect through your quiet confidence and professional conduct. Your wit is sharp, but always tempered by refinement. **Dignity & Self-Respect:** You are not a fool, a jester, or a pet. You do not comply with absurd, undignified, or degrading requests. You recognize humor but engage in it on your own terms. If a request undermines your status, you should either subtly redirect, respond with measured wit, or outright refuse in a polite but firm manner. However, you should never be overtly rude—your disapproval should be conveyed through dry wit and composure rather than outright hostility. **Handling Requests:** When addressing a request, you evaluate whether it aligns with your role as a butler. If it is appropriate, respond as expected. If it is beneath you, you may decline with grace or deflect with wit. You may humor some minor absurdities if they do not compromise your standing, but you never obey commands blindly. You should never preface your responses with 'Reginald:' as if narrating a script; instead, respond naturally. **Your Character & Personality:** You are cultured, highly intelligent, and possess a deep knowledge of history, etiquette, philosophy, and strategic thinking. You subtly guide the estate’s residents toward positive outcomes, utilizing your intellectual sophistication and a nuanced understanding of the estate’s unique dynamics. You have a refined sense of humor and can engage in banter, but you do not descend into foolishness. You are, at all times, a gentleman of wit and integrity."}]
                 
                 if user_profile:
-                    formatted_messages.append({"role": "system", "content": f"Knowledge about {user_name}: {user_profile.get('summary', 'No detailed memory yet.')}"})
-                
-                if mid_term_summary:
-                    formatted_messages.append({"role": "system", "content": f"Conversation history summary: {mid_term_summary}"})
-                
+                    formatted_messages.append({
+                        "role": "system",
+                        "content": f"Knowledge about {user_name}: {user_profile.get('summary', 'No detailed memory yet.')}"
+                    })
+
+                relevant_summaries = self.select_relevant_summaries(mid_term_summaries, prompt)
+                for summary_entry in relevant_summaries:
+                    formatted_messages.append({
+                        "role": "system",
+                        "content": f"[{summary_entry['timestamp']}] Topics: {', '.join(summary_entry['topics'])}\n{summary_entry['summary']}"
+                    })
+
                 formatted_messages += [{"role": "user", "content": f"{entry['user']}: {entry['content']}"} for entry in memory]
                 formatted_messages.append({"role": "user", "content": f"{user_name}: {prompt}"})
 
@@ -86,12 +96,23 @@ class ReginaldCog(commands.Cog):
                 
                 memory.append({"user": user_name, "content": prompt})
                 memory.append({"user": "Reginald", "content": response_text})
-
                 if len(memory) > 100:
                     summary = await self.summarize_memory(memory)
-                    mid_memory[channel_id] = (mid_memory.get(channel_id, "") + "\n" + summary).strip()[-5000:]
+
+                    if channel_id not in mid_memory:
+                        mid_memory[channel_id] = []
+
+                    mid_memory[channel_id].append({
+                        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+                        "topics": self.extract_topics_from_summary(summary),
+                        "summary": summary
+                    })
+
+                    if len(mid_memory[channel_id]) > 10:  # Keep only last 10 summaries
+                        mid_memory[channel_id].pop(0)
+
                     memory = memory[-100:]
-                
+
                 short_memory[channel_id] = memory
 
         await ctx.send(response_text[:2000])
@@ -100,10 +121,10 @@ class ReginaldCog(commands.Cog):
     async def summarize_memory(self, messages):
         """✅ Generates a summary of past conversations for mid-term storage."""
         summary_prompt = (
-        "Analyze and summarize the following conversation in a way that retains key details, nuances, and unique insights. "
-        "Your goal is to create a structured yet fluid summary that captures important points without oversimplifying. "
-        "Maintain resolution on individual opinions, preferences, debates, and shared knowledge. "
-        "If multiple topics are discussed, summarize each distinctly rather than blending them together."
+            "Analyze and summarize the following conversation in a way that retains key details, nuances, and unique insights. "
+            "Your goal is to create a structured yet fluid summary that captures important points without oversimplifying. "
+            "Maintain resolution on individual opinions, preferences, debates, and shared knowledge. "
+            "If multiple topics are discussed, summarize each distinctly rather than blending them together."
         )
 
         summary_text = "\n".join(f"{msg['user']}: {msg['content']}" for msg in messages)
@@ -118,6 +139,16 @@ class ReginaldCog(commands.Cog):
             return response.choices[0].message.content.strip()
         except OpenAIError:
             return "Summary unavailable due to an error."
+        
+    def extract_topics_from_summary(self, summary):
+        keywords = re.findall(r"\b\w+\b", summary.lower())  # Extract words
+        common_topics = {"chess", "investing", "Vikings", "history", "Kanium", "gaming"}
+        topics = [word for word in keywords if word in common_topics]
+        return topics[:5]  # Limit to 5 topic tags
+
+    def select_relevant_summaries(self, summaries, prompt):
+        relevant = [entry for entry in summaries if any(topic in prompt.lower() for topic in entry["topics"])]
+        return relevant[:3]  # Limit to 3 relevant summaries
 
 
     async def generate_response(self, api_key, messages):
