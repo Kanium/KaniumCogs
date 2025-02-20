@@ -95,29 +95,36 @@ class ReginaldCog(commands.Cog):
 
                 response_text = await self.generate_response(api_key, formatted_messages)
 
-            if len(memory) > self.short_term_memory_limit:
-                summary = await self.summarize_memory(memory)
+        # ✅ First, add the new user input and response to memory
+        memory.append({"user": user_name, "content": prompt})
+        memory.append({"user": "Reginald", "content": response_text})
 
-                if channel_id not in mid_memory:
-                    mid_memory[channel_id] = []
+        # ✅ Check if pruning is needed
+        if len(memory) > self.short_term_memory_limit:
+    
+            # 🔹 Generate a summary of the short-term memory
+            summary = await self.summarize_memory(memory)
 
-                mid_memory[channel_id].append({
-                    "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-                    "topics": self.extract_topics_from_summary(summary),
-                    "summary": summary
-                })
+            # 🔹 Ensure mid-term memory exists for the channel
+            mid_memory.setdefault(channel_id, [])
 
-                if len(mid_memory[channel_id]) > 10:  # Keep only last 10 summaries
-                    mid_memory[channel_id].pop(0)
+            # 🔹 Store the new summary with timestamp and extracted topics
+            mid_memory[channel_id].append({
+                "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "topics": self.extract_topics_from_summary(summary),
+                "summary": summary
+            })
 
-                # ✅ Only prune short-term memory if a new summary was made
-                retention_ratio = 0.25  # Keep 25% of messages for immediate continuity
-                keep_count = max(1, int(len(memory) * retention_ratio))  # Keep at least 1 message
-                memory = memory[-keep_count:]  # Remove oldest 75%, keep recent
+            # 🔹 Maintain only the last 10 summaries
+            if len(mid_memory[channel_id]) > 10:
+                mid_memory[channel_id].pop(0)
 
-            memory.append({"user": user_name, "content": prompt})
-            memory.append({"user": "Reginald", "content": response_text})
+            # ✅ Only prune short-term memory if a new summary was made
+            retention_ratio = 0.25  # Keep 25% of messages for immediate continuity
+            keep_count = max(1, int(len(memory) * retention_ratio))  # Keep at least 1 message
+            memory = memory[-keep_count:]  # Remove oldest 75%, keep recent
 
+        # ✅ Store updated short-term memory back
         short_memory[channel_id] = memory
 
         await ctx.send(response_text[:2000])
