@@ -125,6 +125,15 @@ class ReginaldCog(commands.Cog):
         """✅ Removes a role's permission to use Reginald."""
         await self.config.guild(ctx.guild).allowed_role.clear()
         await ctx.send("The role's permission to use the Reginald command has been revoked.")
+        
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    @commands.command(help="Set the OpenAI API key")
+    async def setreginaldcogapi(self, ctx, api_key):
+        """Allows an admin to set the OpenAI API key for Reginald."""
+        await self.config.guild(ctx.guild).openai_api_key.set(api_key)
+        await ctx.send("OpenAI API key set successfully.")
+
 
 async def setup(bot):
     """✅ Correct async cog setup for Redbot"""
