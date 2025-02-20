@@ -3,7 +3,7 @@ import openai
 import random
 import asyncio
 from redbot.core import Config, commands
-from openai import AsyncOpenAI, OpenAIError
+from openai import OpenAIError
 
 class ReginaldCog(commands.Cog):
     def __init__(self, bot):
@@ -23,20 +23,22 @@ class ReginaldCog(commands.Cog):
         self.config.register_guild(**default_guild)
 
     async def is_admin(self, ctx):
+        """✅ Checks if the user is an admin (or has an assigned admin role)."""
         admin_role_id = await self.config.guild(ctx.guild).admin_role()
         if admin_role_id:
             return any(role.id == admin_role_id for role in ctx.author.roles)
         return ctx.author.guild_permissions.administrator
 
     async def is_allowed(self, ctx):
+        """✅ Checks if the user is allowed to use Reginald based on role settings."""
         allowed_role_id = await self.config.guild(ctx.guild).allowed_role()
         return any(role.id == allowed_role_id for role in ctx.author.roles) if allowed_role_id else False
 
     @commands.command(name="reginald", help="Ask Reginald a question")
     @commands.cooldown(1, 10, commands.BucketType.user)
     async def reginald(self, ctx, *, prompt=None):
-        """Handles direct interactions with Reginald, ensuring per-user memory tracking"""
-
+        """Handles direct interactions with Reginald, ensuring per-user memory tracking."""
+        
         if not await self.is_admin(ctx) and not await self.is_allowed(ctx):
             await ctx.send("You do not have the required role to use this command.")
             return
@@ -86,22 +88,24 @@ class ReginaldCog(commands.Cog):
         await ctx.send(response_text[:2000])  # Discord character limit safeguard
 
     async def generate_response(self, api_key, messages):
+        """✅ Generates a response using OpenAI's async API client (corrected version)."""
         model = await self.config.openai_model()
         try:
-            client = AsyncOpenAI(api_key=api_key)  # ✅ Correct OpenAI client initialization
-            response = await client.chat.completions.create(
-                model=model,
-                messages=messages,
-                max_tokens=1024,
-                temperature=0.7,
-                presence_penalty=0.5,
-                frequency_penalty=0.5
-            )
+            async with openai.AsyncClient(api_key=api_key) as client:  # ✅ Correct API key handling
+                response = await client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    max_tokens=1024,
+                    temperature=0.7,
+                    presence_penalty=0.5,
+                    frequency_penalty=0.5
+                )
+                
             if not response.choices:
                 return "I fear I have no words to offer at this time."
 
             return response.choices[0].message.content.strip()
-        except OpenAIError as e:
+        except OpenAIError:
             fallback_responses = [
                 "It appears I am currently indisposed. Might I suggest a cup of tea while we wait?",
                 "Regrettably, I am unable to respond at this moment. Perhaps a short reprieve would be advisable.",
@@ -112,12 +116,14 @@ class ReginaldCog(commands.Cog):
     @commands.command(name="reginald_allowrole", help="Allow a role to use the Reginald command")
     @commands.has_permissions(administrator=True)
     async def allow_role(self, ctx, role: discord.Role):
+        """✅ Grants permission to a role to use Reginald."""
         await self.config.guild(ctx.guild).allowed_role.set(role.id)
         await ctx.send(f"The role `{role.name}` (ID: `{role.id}`) is now allowed to use the Reginald command.")
 
     @commands.command(name="reginald_disallowrole", help="Remove a role's ability to use the Reginald command")
     @commands.has_permissions(administrator=True)
     async def disallow_role(self, ctx):
+        """✅ Removes a role's permission to use Reginald."""
         await self.config.guild(ctx.guild).allowed_role.clear()
         await ctx.send("The role's permission to use the Reginald command has been revoked.")
 
