@@ -36,7 +36,7 @@ class ReginaldCog(commands.Cog):
         allowed_role_id = await self.config.guild(ctx.guild).allowed_role()
         return any(role.id == allowed_role_id for role in ctx.author.roles) if allowed_role_id else False
 
-    @commands.command(name="reginald", help="Ask Reginald a question in shared channels")
+    @commands.command(name="reginald", aliases=["Reginald"], help="Ask Reginald a question in shared channels")
     @commands.cooldown(1, 10, commands.BucketType.user)
     async def reginald(self, ctx, *, prompt=None):
         """Handles multi-user memory tracking in shared channels, recognizing mentions properly."""
