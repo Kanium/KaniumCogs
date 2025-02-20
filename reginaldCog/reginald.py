@@ -88,11 +88,11 @@ class ReginaldCog(commands.Cog):
         await ctx.send(response_text[:2000])  # Discord character limit safeguard
 
     async def generate_response(self, api_key, messages):
-        """✅ Generates a response using OpenAI's async API client (corrected version)."""
+        """✅ Generates a response using OpenAI's new async API client (OpenAI v1.0+)."""
         model = await self.config.openai_model()
         try:
-            openai.api_key = api_key  # ✅ Correct API key handling
-            response = await openai.ChatCompletion.acreate(
+            client = openai.AsyncOpenAI(api_key=api_key)  # ✅ Correct API usage
+            response = await client.chat.completions.create(
                 model=model,
                 messages=messages,
                 max_tokens=1024,
@@ -104,21 +104,15 @@ class ReginaldCog(commands.Cog):
             if not response.choices:
                 return "I fear I have no words to offer at this time."
 
-            return response.choices[0].message["content"].strip()
-        
+            return response.choices[0].message.content.strip()
+
         except OpenAIError as e:
-            error_trace = traceback.format_exc()  # Get full traceback
-            error_message = str(e)
-
-            # ✅ Log the full error for debugging (but not reveal the whole traceback to users)
-            print(f"⚠️ OpenAI Error: {error_trace}")
-
-            # ✅ Reginald will present the error in-character
+            error_message = f"OpenAI Error: {e}"
             reginald_responses = [
-                f"Regrettably, I must inform you that I have encountered a bureaucratic obstruction:\n\n```{error_message}```\nI shall endeavor to resolve this at the earliest convenience.",
-                f"It would seem that a most unfortunate technical hiccup has befallen my faculties:\n\n```{error_message}```\nPerhaps a cup of tea and a moment of patience will remedy the situation.",
-                f"Ah, it appears I have received an urgent memorandum stating:\n\n```{error_message}```\nI shall investigate this matter forthwith, sir.",
-                f"I regret to inform you that my usual eloquence is presently obstructed by an unforeseen complication:\n\n```{error_message}```\nRest assured, I shall recover momentarily."
+                f"Regrettably, I must inform you that I have encountered a bureaucratic obstruction:\n\n```{error_message}```",
+                f"It would seem that a most unfortunate technical hiccup has befallen my faculties:\n\n```{error_message}```",
+                f"Ah, it appears I have received an urgent memorandum stating:\n\n```{error_message}```",
+                f"I regret to inform you that my usual eloquence is presently obstructed by an unforeseen complication:\n\n```{error_message}```"
             ]
             return random.choice(reginald_responses)
 
