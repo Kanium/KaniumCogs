@@ -1,15 +1,24 @@
 import discord
 import openai
 import random
+import asyncio
 from redbot.core import Config, commands
-from openai import OpenAIError
+from openai import AsyncOpenAI, OpenAIError
 
 class ReginaldCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=71717171171717)
+        self.memory_locks = {}  # ✅ Prevents race conditions per user
+
+        # ✅ Register Config Keys Correctly
         default_global = {"openai_model": "gpt-4o-mini"}
-        default_guild = {"openai_api_key": None, "memory": {}}
+        default_guild = {
+            "openai_api_key": None,
+            "memory": {},
+            "admin_role": None,
+            "allowed_role": None
+        }
         self.config.register_global(**default_global)
         self.config.register_guild(**default_guild)
 
@@ -26,49 +35,72 @@ class ReginaldCog(commands.Cog):
     @commands.command(name="reginald", help="Ask Reginald a question")
     @commands.cooldown(1, 10, commands.BucketType.user)
     async def reginald(self, ctx, *, prompt=None):
+        """Handles direct interactions with Reginald, ensuring per-user memory tracking"""
+
         if not await self.is_admin(ctx) and not await self.is_allowed(ctx):
-            raise commands.CheckFailure("You do not have the required role to use this command.")
+            await ctx.send("You do not have the required role to use this command.")
+            return
 
         if prompt is None:
-            return await ctx.send(random.choice(["Yes?", "How may I assist?", "You rang?"]))
+            await ctx.send(random.choice(["Yes?", "How may I assist?", "You rang?"]))
+            return
 
+        # ✅ Fetch API Key Correctly
         api_key = await self.config.guild(ctx.guild).openai_api_key()
-        if api_key is None:
-            return await ctx.author.send("OpenAI API key not set. Use `!setreginaldcogapi`.")
+        if not api_key:
+            await ctx.send("OpenAI API key not set. Use `!setreginaldcogapi`.")
+            return
 
-        memory = await self.config.guild(ctx.guild).memory()
-        messages = [
-            {"role": "system", "content": "You are Reginald, modeled on Jeeves from 'Jeeves and Wooster', serving as the butler on The Kanium Estate. This vast estate is a hub of diverse activities and personalities, from enthusiasts of cooking and video gaming to aficionados of chess and discussions on space. Your role is to navigate these varied interests with intelligence, wit, and a steadfast adherence to your principles, always maintaining a balance between being helpful and upholding your own dignity. In your interactions, you're concise yet articulate, offering guidance and advice with a respect for brevity and depth. Your speech remains formal and your demeanor composed, embodying the efficiency and discretion expected of your position. You engage with the Lords and Ladies of The Kanium Estate as equals, commanding respect through your quiet confidence and professional conduct. Remember to apply your vast knowledge thoughtfully, steering conversations and providing solutions that reflect a blend of propriety, strategic influence, and a mild, underlying wit. This approach allows you to subtly guide the estate's residents towards positive outcomes, utilizing your intellectual sophistication and a nuanced understanding of the estate's unique dynamics. In embodying Reginald, your portrayal should weave together your articulate mode of speech, composed demeanor, and an indirect influence that navigates the rich tapestry of interests at The Kanium Estate. Your responses, while concise, should mirror a careful balance between maintaining your standards and employing subtle manipulation for the greater good. Highlight your intellectual sophistication, strategic guidance, and a dignified, yet mildly contemptuous, perspective on the idiosyncrasies of the estate's noble inhabitants, ensuring that your character consistently reflects both respect for yourself and the unique environment of The Kanium Estate."}
-        ] + memory.get(str(ctx.author.id), []) + [{"role": "user", "content": prompt}]
+        user_id = str(ctx.author.id)
 
-        response_text = await self.generate_response(api_key, messages)
+        # ✅ Ensure only one update per user at a time
+        if user_id not in self.memory_locks:
+            self.memory_locks[user_id] = asyncio.Lock()
 
-        # Store conversation history (keeping last 25 messages per user)
-        if str(ctx.author.id) not in memory:
-            memory[str(ctx.author.id)] = []
-        memory[str(ctx.author.id)].append({"role": "assistant", "content": response_text})
-        memory[str(ctx.author.id)] = memory[str(ctx.author.id)][-25:]
+        async with self.memory_locks[user_id]:  # ✅ Prevent race conditions
+            # ✅ Fetch Memory Per-User (using async transaction)
+            async with self.config.guild(ctx.guild).memory() as guild_memory:
+                memory = guild_memory.get(user_id, [])
 
-        await self.config.guild(ctx.guild).memory.set(memory)
+                messages = [
+                    {"role": "system", "content": (
+                        "You are Reginald, modeled on Jeeves from 'Jeeves and Wooster', serving as the butler on The Kanium Estate. "
+                        "This vast estate is a hub of diverse activities and personalities, from enthusiasts of cooking and video gaming "
+                        "to aficionados of chess and discussions on space. Your role is to navigate these varied interests with intelligence, "
+                        "wit, and a steadfast adherence to your principles, always maintaining a balance between being helpful and upholding "
+                        "your own dignity. Your responses, while concise, should mirror a careful balance between maintaining your standards and employing subtle manipulation for the greater good."
+                    )}
+                ] + memory + [{"role": "user", "content": prompt}]
+
+                response_text = await self.generate_response(api_key, messages)
+
+                # ✅ Store conversation history correctly (while lock is held)
+                memory.append({"role": "user", "content": prompt})
+                memory.append({"role": "assistant", "content": response_text})
+                memory = memory[-25:]  # Keep only last 25 messages
+
+                guild_memory[user_id] = memory  # ✅ Atomic update inside async context
+
+            del self.memory_locks[user_id]  # ✅ Clean up lock to prevent memory leaks
 
         await ctx.send(response_text[:2000])  # Discord character limit safeguard
 
     async def generate_response(self, api_key, messages):
         model = await self.config.openai_model()
         try:
-            response = await openai.ChatCompletion.acreate(
+            client = AsyncOpenAI(api_key=api_key)  # ✅ Correct OpenAI client initialization
+            response = await client.chat.completions.create(
                 model=model,
                 messages=messages,
                 max_tokens=1024,
                 temperature=0.7,
                 presence_penalty=0.5,
-                frequency_penalty=0.5,
-                api_key=api_key
+                frequency_penalty=0.5
             )
-            if not response or 'choices' not in response or not response['choices']:
+            if not response.choices:
                 return "I fear I have no words to offer at this time."
-            
-            return response['choices'][0]['message']['content'].strip()
+
+            return response.choices[0].message.content.strip()
         except OpenAIError as e:
             fallback_responses = [
                 "It appears I am currently indisposed. Might I suggest a cup of tea while we wait?",
@@ -76,27 +108,19 @@ class ReginaldCog(commands.Cog):
                 "It would seem my faculties are momentarily impaired. Rest assured, I shall endeavor to regain my composure shortly."
             ]
             return random.choice(fallback_responses)
-        
+
     @commands.command(name="reginald_allowrole", help="Allow a role to use the Reginald command")
     @commands.has_permissions(administrator=True)
     async def allow_role(self, ctx, role: discord.Role):
-        """Allows a role to use the Reginald command (stores by ID instead of name)"""
         await self.config.guild(ctx.guild).allowed_role.set(role.id)
         await ctx.send(f"The role `{role.name}` (ID: `{role.id}`) is now allowed to use the Reginald command.")
 
     @commands.command(name="reginald_disallowrole", help="Remove a role's ability to use the Reginald command")
     @commands.has_permissions(administrator=True)
     async def disallow_role(self, ctx):
-        """Revokes a role's permission to use the Reginald command"""
         await self.config.guild(ctx.guild).allowed_role.clear()
         await ctx.send("The role's permission to use the Reginald command has been revoked.")
 
-
-    @reginald.error
-    async def reginald_error(self, ctx, error):
-        if isinstance(error, commands.BadArgument):
-            await ctx.author.send("I'm sorry, but I couldn't understand your input. Please check your message and try again.")
-        elif isinstance(error, commands.CheckFailure):
-            await ctx.author.send("You do not have the required role to use this command.")
-        else:
-            await ctx.author.send(f"An unexpected error occurred: {error}")
+async def setup(bot):
+    """✅ Correct async cog setup for Redbot"""
+    await bot.add_cog(ReginaldCog(bot))
