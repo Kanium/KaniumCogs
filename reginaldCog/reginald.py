@@ -95,29 +95,29 @@ class ReginaldCog(commands.Cog):
 
                 response_text = await self.generate_response(api_key, formatted_messages)
 
-        if len(memory) > self.short_term_memory_limit:
-            summary = await self.summarize_memory(memory)
+            if len(memory) > self.short_term_memory_limit:
+                summary = await self.summarize_memory(memory)
 
-            if channel_id not in mid_memory:
-                mid_memory[channel_id] = []
+                if channel_id not in mid_memory:
+                    mid_memory[channel_id] = []
 
-            mid_memory[channel_id].append({
-                "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-                "topics": self.extract_topics_from_summary(summary),
-                "summary": summary
-            })
+                mid_memory[channel_id].append({
+                    "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+                    "topics": self.extract_topics_from_summary(summary),
+                    "summary": summary
+                })
 
-            if len(mid_memory[channel_id]) > 10:  # Keep only last 10 summaries
-                mid_memory[channel_id].pop(0)
+                if len(mid_memory[channel_id]) > 10:  # Keep only last 10 summaries
+                    mid_memory[channel_id].pop(0)
 
-            # ✅ Only prune short-term memory if a new summary was made
-            retention_ratio = 0.25  # Keep 25% of messages for immediate continuity
-            keep_count = max(1, int(len(memory) * retention_ratio))  # Keep at least 1 message
-            memory = memory[-keep_count:]  # Remove oldest 75%, keep recent
+                # ✅ Only prune short-term memory if a new summary was made
+                retention_ratio = 0.25  # Keep 25% of messages for immediate continuity
+                keep_count = max(1, int(len(memory) * retention_ratio))  # Keep at least 1 message
+                memory = memory[-keep_count:]  # Remove oldest 75%, keep recent
 
-        memory.append({"user": user_name, "content": prompt})
-        memory.append({"user": "Reginald", "content": response_text})
-        
+            memory.append({"user": user_name, "content": prompt})
+            memory.append({"user": "Reginald", "content": response_text})
+
         short_memory[channel_id] = memory
 
         await ctx.send(response_text[:2000])
