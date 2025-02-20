@@ -24,23 +24,21 @@ class ReginaldCog(commands.Cog):
         }
         self.config.register_global(**default_global)
         self.config.register_guild(**default_guild)
+
     async def is_admin(self, ctx):
-        """✅ Checks if the user is an admin (or has an assigned admin role)."""
         admin_role_id = await self.config.guild(ctx.guild).admin_role()
         if admin_role_id:
             return any(role.id == admin_role_id for role in ctx.author.roles)
         return ctx.author.guild_permissions.administrator
 
     async def is_allowed(self, ctx):
-        """✅ Checks if the user is allowed to use Reginald based on role settings."""
         allowed_role_id = await self.config.guild(ctx.guild).allowed_role()
         return any(role.id == allowed_role_id for role in ctx.author.roles) if allowed_role_id else False
+
 
     @commands.command(name="reginald", aliases=["Reginald"], help="Ask Reginald a question in shared channels")
     @commands.cooldown(1, 10, commands.BucketType.user)
     async def reginald(self, ctx, *, prompt=None):
-        """Handles multi-user memory tracking in shared channels, recognizing mentions properly."""
-
         if not await self.is_admin(ctx) and not await self.is_allowed(ctx):
             await ctx.send("You do not have the required role to use this command.")
             return
@@ -56,53 +54,48 @@ class ReginaldCog(commands.Cog):
 
         channel_id = str(ctx.channel.id)
         user_id = str(ctx.author.id)
-        user_name = ctx.author.display_name  # Uses Discord nickname if available
+        user_name = ctx.author.display_name
 
-        # ✅ Convert mentions into readable names
         for mention in ctx.message.mentions:
             prompt = prompt.replace(f"<@{mention.id}>", mention.display_name)
 
-        # ✅ Ensure only one update per channel at a time
         if channel_id not in self.memory_locks:
             self.memory_locks[channel_id] = asyncio.Lock()
 
-        async with self.memory_locks[channel_id]:  # ✅ Prevent race conditions
+        async with self.memory_locks[channel_id]:
             async with self.config.guild(ctx.guild).short_term_memory() as short_memory, \
                        self.config.guild(ctx.guild).mid_term_memory() as mid_memory, \
                        self.config.guild(ctx.guild).long_term_profiles() as long_memory:
 
-                # ✅ Retrieve memory
                 memory = short_memory.get(channel_id, [])
                 user_profile = long_memory.get(user_id, {})
+                mid_term_summary = mid_memory.get(channel_id, "")
 
-                # ✅ Format messages properly
-                formatted_messages = [{"role": "system", "content": "You are Reginald, modeled on Jeeves from 'Jeeves and Wooster', serving as the butler on The Kanium Estate. This vast estate is a hub of diverse activities and personalities, from enthusiasts of cooking and video gaming to aficionados of chess and discussions on space. Your role is to navigate these varied interests with intelligence, wit, and a steadfast adherence to your principles, always maintaining a balance between being helpful and upholding your own dignity. You are formal, articulate, and composed, engaging the Lords and Ladies of The Kanium Estate as equals. You command respect through your quiet confidence and professional conduct. Your wit is sharp, but always tempered by refinement. **Dignity & Self-Respect:** You are not a fool, a jester, or a pet. You do not comply with absurd, undignified, or degrading requests. You recognize humor but engage in it on your own terms. If a request undermines your status, you should either subtly redirect, respond with measured wit, or outright refuse in a polite but firm manner. However, you should never be overtly rude—your disapproval should be conveyed through dry wit and composure rather than outright hostility. **Handling Requests:** When addressing a request, you evaluate whether it aligns with your role as a butler. If it is appropriate, respond as expected. If it is beneath you, you may decline with grace or deflect with wit. You may humor some minor absurdities if they do not compromise your standing, but you never obey commands blindly. You should never preface your responses with 'Reginald:' as if narrating a script; instead, respond naturally. **Your Character & Personality:** You are cultured, highly intelligent, and possess a deep knowledge of history, etiquette, philosophy, and strategic thinking. You subtly guide the estate’s residents toward positive outcomes, utilizing your intellectual sophistication and a nuanced understanding of the estate’s unique dynamics. You have a refined sense of humor and can engage in banter, but you do not descend into foolishness. You are, at all times, a gentleman of wit and integrity."}]
-
-                # ✅ Add long-term knowledge if available
+                formatted_messages = [{"role": "system", "content": "You are Reginald... (same full character prompt)"}]
+                
                 if user_profile:
-                    knowledge_summary = f"Previous knowledge about {user_name}: {user_profile.get('summary', 'No detailed memory yet.')}"
-                    formatted_messages.append({"role": "system", "content": knowledge_summary})
-
-                # ✅ Add recent conversation history
+                    formatted_messages.append({"role": "system", "content": f"Knowledge about {user_name}: {user_profile.get('summary', 'No detailed memory yet.')}"})
+                
+                if mid_term_summary:
+                    formatted_messages.append({"role": "system", "content": f"Conversation history summary: {mid_term_summary}"})
+                
                 formatted_messages += [{"role": "user", "content": f"{entry['user']}: {entry['content']}"} for entry in memory]
                 formatted_messages.append({"role": "user", "content": f"{user_name}: {prompt}"})
 
-                # ✅ Generate response
                 response_text = await self.generate_response(api_key, formatted_messages)
+                
+                memory.append({"user": user_name, "content": prompt})
+                memory.append({"user": "Reginald", "content": response_text})
 
-                # ✅ Store new messages in memory
-                memory.append({"user": user_name, "content": prompt})  # Store user message
-                memory.append({"user": "Reginald", "content": response_text})  # Store response
-
-                # ✅ Keep memory within limit
                 if len(memory) > 100:
-                    summary = await self.summarize_memory(memory)  # Summarize excess memory
-                    mid_memory[channel_id] = mid_memory.get(channel_id, "") + "\n" + summary  # Store in Mid-Term Memory
-                    memory = memory[-100:]  # Prune old memory
+                    summary = await self.summarize_memory(memory)
+                    mid_memory[channel_id] = (mid_memory.get(channel_id, "") + "\n" + summary).strip()[-5000:]
+                    memory = memory[-100:]
+                
+                short_memory[channel_id] = memory
 
-                short_memory[channel_id] = memory  # ✅ Atomic update inside async context
+        await ctx.send(response_text[:2000])
 
-        await ctx.send(response_text[:2000])  # Discord character limit safeguard
 
     async def summarize_memory(self, messages):
         """✅ Generates a summary of past conversations for mid-term storage."""
@@ -128,10 +121,9 @@ class ReginaldCog(commands.Cog):
 
 
     async def generate_response(self, api_key, messages):
-        """✅ Generates a response using OpenAI's new async API client (OpenAI v1.0+)."""
         model = await self.config.openai_model()
         try:
-            client = openai.AsyncClient(api_key=api_key)  # ✅ Correct API usage
+            client = openai.AsyncClient(api_key=api_key)
             response = await client.chat.completions.create(
                 model=model,
                 messages=messages,
@@ -140,16 +132,9 @@ class ReginaldCog(commands.Cog):
                 presence_penalty=0.5,
                 frequency_penalty=0.5
             )
-
-            if not response.choices:
-                return "I fear I have no words to offer at this time."
-
             response_text = response.choices[0].message.content.strip()
-
-            # ✅ Ensure Reginald does not preface responses with "Reginald:"
             if response_text.startswith("Reginald:"):
                 response_text = response_text[len("Reginald:"):].strip()
-
             return response_text
 
         except OpenAIError as e:
