@@ -104,13 +104,22 @@ class ReginaldCog(commands.Cog):
                 return "I fear I have no words to offer at this time."
 
             return response.choices[0].message["content"].strip()
-        except OpenAIError:
-            fallback_responses = [
-                "It appears I am currently indisposed. Might I suggest a cup of tea while we wait?",
-                "Regrettably, I am unable to respond at this moment. Perhaps a short reprieve would be advisable.",
-                "It would seem my faculties are momentarily impaired. Rest assured, I shall endeavor to regain my composure shortly."
+        
+        except OpenAIError as e:
+            error_trace = traceback.format_exc()  # Get full traceback
+            error_message = str(e)
+
+            # ✅ Log the full error for debugging (but not reveal the whole traceback to users)
+            print(f"⚠️ OpenAI Error: {error_trace}")
+
+            # ✅ Reginald will present the error in-character
+            reginald_responses = [
+                f"Regrettably, I must inform you that I have encountered a bureaucratic obstruction:\n\n```{error_message}```\nI shall endeavor to resolve this at the earliest convenience.",
+                f"It would seem that a most unfortunate technical hiccup has befallen my faculties:\n\n```{error_message}```\nPerhaps a cup of tea and a moment of patience will remedy the situation.",
+                f"Ah, it appears I have received an urgent memorandum stating:\n\n```{error_message}```\nI shall investigate this matter forthwith, sir.",
+                f"I regret to inform you that my usual eloquence is presently obstructed by an unforeseen complication:\n\n```{error_message}```\nRest assured, I shall recover momentarily."
             ]
-            return random.choice(fallback_responses)
+            return random.choice(reginald_responses)
 
     @commands.command(name="reginald_allowrole", help="Allow a role to use the Reginald command")
     @commands.has_permissions(administrator=True)
