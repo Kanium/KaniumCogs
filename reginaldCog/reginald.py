@@ -94,9 +94,6 @@ class ReginaldCog(commands.Cog):
                 formatted_messages.append({"role": "user", "content": f"{user_name}: {prompt}"})
 
                 response_text = await self.generate_response(api_key, formatted_messages)
-                
-                memory.append({"user": user_name, "content": prompt})
-                memory.append({"user": "Reginald", "content": response_text})
 
         if len(memory) > self.short_term_memory_limit:
             summary = await self.summarize_memory(memory)
@@ -118,7 +115,9 @@ class ReginaldCog(commands.Cog):
             keep_count = max(1, int(len(memory) * retention_ratio))  # Keep at least 1 message
             memory = memory[-keep_count:]  # Remove oldest 75%, keep recent
 
-
+        memory.append({"user": user_name, "content": prompt})
+        memory.append({"user": "Reginald", "content": response_text})
+        
         short_memory[channel_id] = memory
 
         await ctx.send(response_text[:2000])
