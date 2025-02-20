@@ -144,7 +144,13 @@ class ReginaldCog(commands.Cog):
             if not response.choices:
                 return "I fear I have no words to offer at this time."
 
-            return response.choices[0].message.content.strip()
+            response_text = response.choices[0].message.content.strip()
+
+            # ✅ Ensure Reginald does not preface responses with "Reginald:"
+            if response_text.startswith("Reginald:"):
+                response_text = response_text[len("Reginald:"):].strip()
+
+            return response_text
 
         except OpenAIError as e:
             error_message = f"OpenAI Error: {e}"
