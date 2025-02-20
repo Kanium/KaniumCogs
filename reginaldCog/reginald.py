@@ -38,8 +38,8 @@ class ReginaldCog(commands.Cog):
     @commands.command(name="reginald", help="Ask Reginald a question in shared channels")
     @commands.cooldown(1, 10, commands.BucketType.user)
     async def reginald(self, ctx, *, prompt=None):
-        """Handles multi-user memory tracking in shared channels"""
-        
+        """Handles multi-user memory tracking in shared channels, recognizing mentions properly."""
+
         if not await self.is_admin(ctx) and not await self.is_allowed(ctx):
             await ctx.send("You do not have the required role to use this command.")
             return
@@ -53,7 +53,11 @@ class ReginaldCog(commands.Cog):
             await ctx.send("OpenAI API key not set. Use `!setreginaldcogapi`.")
             return
 
-        channel_id = str(ctx.channel.id)  # ✅ Track memory per-channel
+        channel_id = str(ctx.channel.id)
+
+        # ✅ Convert mentions into readable names
+        for mention in ctx.message.mentions:
+            prompt = prompt.replace(f"<@{mention.id}>", mention.display_name)
 
         # ✅ Ensure only one update per channel at a time
         if channel_id not in self.memory_locks:
