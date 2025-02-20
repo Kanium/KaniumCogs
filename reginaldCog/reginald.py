@@ -76,6 +76,21 @@ class ReginaldCog(commands.Cog):
                 "It would seem my faculties are momentarily impaired. Rest assured, I shall endeavor to regain my composure shortly."
             ]
             return random.choice(fallback_responses)
+        
+    @commands.command(name="reginald_allowrole", help="Allow a role to use the Reginald command")
+    @commands.has_permissions(administrator=True)
+    async def allow_role(self, ctx, role: discord.Role):
+        """Allows a role to use the Reginald command (stores by ID instead of name)"""
+        await self.config.guild(ctx.guild).allowed_role.set(role.id)
+        await ctx.send(f"The role `{role.name}` (ID: `{role.id}`) is now allowed to use the Reginald command.")
+
+    @commands.command(name="reginald_disallowrole", help="Remove a role's ability to use the Reginald command")
+    @commands.has_permissions(administrator=True)
+    async def disallow_role(self, ctx):
+        """Revokes a role's permission to use the Reginald command"""
+        await self.config.guild(ctx.guild).allowed_role.clear()
+        await ctx.send("The role's permission to use the Reginald command has been revoked.")
+
 
     @reginald.error
     async def reginald_error(self, ctx, error):
