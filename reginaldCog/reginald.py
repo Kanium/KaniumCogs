@@ -14,6 +14,7 @@ class ReginaldCog(commands.Cog):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=71717171171717)
         self.memory_locks = {}  # ✅ Prevents race conditions per channel
+        self.short_term_memory_limit = 100  # Default value, can be changed dynamically
 
         # ✅ Properly Registered Configuration Keys
         default_global = {"openai_model": "gpt-4o-mini"}
@@ -96,7 +97,7 @@ class ReginaldCog(commands.Cog):
                 
                 memory.append({"user": user_name, "content": prompt})
                 memory.append({"user": "Reginald", "content": response_text})
-                if len(memory) > 100:
+                if len(memory) > self.short_term_memory_limit:
                     summary = await self.summarize_memory(memory)
 
                     if channel_id not in mid_memory:
@@ -265,6 +266,17 @@ class ReginaldCog(commands.Cog):
         """Allows an admin to set the OpenAI API key for Reginald."""
         await self.config.guild(ctx.guild).openai_api_key.set(api_key)
         await ctx.send("OpenAI API key set successfully.")
+    
+    @commands.command(name="reginald_set_limit", help="Set the short-term memory message limit.")
+    @commands.has_permissions(administrator=True)
+    async def set_short_term_memory_limit(self, ctx, limit: int):
+        """Allows an admin to change the short-term memory limit dynamically."""
+        if limit < 5:
+            await ctx.send("⚠️ The short-term memory limit must be at least 5.")
+            return
+
+        self.short_term_memory_limit = limit
+        await ctx.send(f"✅ Short-term memory limit set to {limit} messages.")
 
 async def setup(bot):
     """✅ Correct async cog setup for Redbot"""
