@@ -2,6 +2,7 @@ import discord
 import openai
 import random
 import asyncio
+import traceback
 from redbot.core import Config, commands
 from openai import OpenAIError
 
