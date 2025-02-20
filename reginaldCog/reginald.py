@@ -3,15 +3,15 @@ import openai
 import random
 import asyncio
 from redbot.core import Config, commands
-from openai import OpenAIError
+from openai.error import OpenAIError
 
 class ReginaldCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=71717171171717)
-        self.memory_locks = {}  # ✅ Prevents race conditions per user
+        self.memory_locks = {}
 
-        # ✅ Register Config Keys Correctly
+        # ✅ Properly Registered Configuration Keys
         default_global = {"openai_model": "gpt-4o-mini"}
         default_guild = {
             "openai_api_key": None,
@@ -47,7 +47,6 @@ class ReginaldCog(commands.Cog):
             await ctx.send(random.choice(["Yes?", "How may I assist?", "You rang?"]))
             return
 
-        # ✅ Fetch API Key Correctly
         api_key = await self.config.guild(ctx.guild).openai_api_key()
         if not api_key:
             await ctx.send("OpenAI API key not set. Use `!setreginaldcogapi`.")
@@ -79,7 +78,7 @@ class ReginaldCog(commands.Cog):
                 # ✅ Store conversation history correctly (while lock is held)
                 memory.append({"role": "user", "content": prompt})
                 memory.append({"role": "assistant", "content": response_text})
-                memory = memory[-25:]  # Keep only last 25 messages
+                memory = memory[-25:]
 
                 guild_memory[user_id] = memory  # ✅ Atomic update inside async context
 
@@ -91,20 +90,20 @@ class ReginaldCog(commands.Cog):
         """✅ Generates a response using OpenAI's async API client (corrected version)."""
         model = await self.config.openai_model()
         try:
-            async with openai.AsyncClient(api_key=api_key) as client:  # ✅ Correct API key handling
-                response = await client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    max_tokens=1024,
-                    temperature=0.7,
-                    presence_penalty=0.5,
-                    frequency_penalty=0.5
-                )
-                
+            openai.api_key = api_key  # ✅ Correct API key handling
+            response = await openai.ChatCompletion.acreate(
+                model=model,
+                messages=messages,
+                max_tokens=1024,
+                temperature=0.7,
+                presence_penalty=0.5,
+                frequency_penalty=0.5
+            )
+
             if not response.choices:
                 return "I fear I have no words to offer at this time."
 
-            return response.choices[0].message.content.strip()
+            return response.choices[0].message["content"].strip()
         except OpenAIError:
             fallback_responses = [
                 "It appears I am currently indisposed. Might I suggest a cup of tea while we wait?",
