@@ -140,11 +140,16 @@ class ReginaldCog(commands.Cog):
     async def summarize_memory(self, ctx, messages):
         """✅ Generates a summary of past conversations for mid-term storage."""
         summary_prompt = (
-            "Analyze and summarize the following conversation in a way that retains key details, nuances, and unique insights. "
-            "Your goal is to create a structured yet fluid summary that captures important points without oversimplifying. "
-            "Maintain resolution on individual opinions, preferences, debates, and shared knowledge. "
-            "If multiple topics are discussed, summarize each distinctly rather than blending them together."
+            "Summarize the following conversation with a focus on efficiency and clarity. "
+            "Compress information intelligently—prioritize key details, decisions, unique insights, and user contributions. "
+            "Maintain resolution: avoid excessive generalization. "
+            "Structure the summary into distinct topics with clear subpoints. "
+            "Ensure that individual opinions, disagreements, and conclusions are retained. "
+            "If multiple topics exist, separate them clearly rather than blending them into one. "
+            "Omit filler words, excessive pleasantries, and redundant phrases. "
+            "Ensure the summary is direct, well-structured, and information-dense."
         )
+
 
         summary_text = "\n".join(f"{msg['user']}: {msg['content']}" for msg in messages)
 
