@@ -404,7 +404,7 @@ class ReginaldCog(commands.Cog):
 
 
         
-    async def send_split_message(ctx, content: str, prefix: str = ""):
+    async def send_split_message(self, ctx, content: str, prefix: str = ""):
         """
         A unified function to handle sending long messages on Discord, ensuring they don't exceed the 2,000-character limit.
 
