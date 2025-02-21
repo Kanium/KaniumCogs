@@ -97,6 +97,11 @@ class ReginaldCog(commands.Cog):
 
                 response_text = await self.generate_response(api_key, formatted_messages)
 
+                # ✅ Extract potential long-term facts from Reginald's response
+                potential_fact = self.extract_fact_from_response(response_text)
+                if potential_fact:
+                    await self.update_long_term_memory(user_id, potential_fact, ctx.message.content, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
+
                 # ✅ First, add the new user input and response to memory
                 memory.append({"user": user_name, "content": prompt})
                 memory.append({"user": "Reginald", "content": response_text})
@@ -234,6 +239,33 @@ class ReginaldCog(commands.Cog):
 
         return weighted_summaries[:max_summaries]  # Return the top-scoring summaries
 
+    def extract_fact_from_response(self, response_text):
+        """
+        Extracts potential long-term knowledge from Reginald's response.
+        This filters out generic responses and focuses on statements about user preferences, traits, and history.
+        """
+
+        # Define patterns that suggest factual knowledge (adjust as needed)
+        fact_patterns = [
+            r"I recall that you (.*?)\.",  # "I recall that you like chess."
+            r"You once mentioned that you (.*?)\.",  # "You once mentioned that you enjoy strategy games."
+            r"Ah, you previously stated that (.*?)\.",  # "Ah, you previously stated that you prefer tea over coffee."
+            r"As I remember, you (.*?)\.",  # "As I remember, you studied engineering."
+            r"I believe you (.*?)\.",  # "I believe you enjoy historical fiction."
+            r"I seem to recall that you (.*?)\.",  # "I seem to recall that you work in software development."
+            r"You have indicated in the past that you (.*?)\.",  # "You have indicated in the past that you prefer single-malt whisky."
+            r"From what I remember, you (.*?)\.",  # "From what I remember, you dislike overly sweet desserts."
+            r"You previously mentioned that (.*?)\.",  # "You previously mentioned that you train in martial arts."
+            r"It is my understanding that you (.*?)\.",  # "It is my understanding that you have a preference for Linux systems."
+            r"If I am not mistaken, you (.*?)\.",  # "If I am not mistaken, you studied philosophy."
+        ]
+
+        for pattern in fact_patterns:
+            match = re.search(pattern, response_text, re.IGNORECASE)
+            if match:
+                return match.group(1)  # Extract the meaningful fact
+
+        return None  # No strong fact found
 
     async def generate_response(self, api_key, messages):
         model = await self.config.openai_model()
@@ -311,6 +343,49 @@ class ReginaldCog(commands.Cog):
             f"- **Long-Term Profiles Stored:** {long_count}\n"
         )
         await ctx.send(status_message)
+
+
+    async def update_long_term_memory(self, user_id: str, fact: str, source_message: str, timestamp: str):
+        """Ensures long-term memory updates are structured, preventing overwrites and tracking historical changes."""
+
+        async with self.config.guild(ctx.guild).long_term_profiles() as long_memory:
+            if user_id not in long_memory:
+                long_memory[user_id] = {"facts": []}
+
+            user_facts = long_memory[user_id]["facts"]
+
+            # Check if similar fact already exists
+            for entry in user_facts:
+                if entry["fact"].lower() == fact.lower():
+                    # If the fact already exists, do nothing
+                    return
+
+            # Check for conflicting facts (facts about same topic but different info)
+            conflicting_entry = None
+            for entry in user_facts:
+                if fact.split(" ")[0].lower() in entry["fact"].lower():  # Match topic keyword
+                    conflicting_entry = entry
+                    break
+
+            if conflicting_entry:
+                # If contradiction found, update it instead of overwriting
+                conflicting_entry["updated"] = timestamp
+                conflicting_entry["previous_versions"].append({
+                    "fact": conflicting_entry["fact"],
+                    "source": conflicting_entry["source"],
+                    "timestamp": conflicting_entry["timestamp"]
+                })
+                conflicting_entry["fact"] = fact  # Store latest info
+                conflicting_entry["source"] = source_message
+                conflicting_entry["timestamp"] = timestamp
+            else:
+                # Otherwise, add as new fact
+                user_facts.append({
+                    "fact": fact,
+                    "source": source_message,
+                    "timestamp": timestamp,
+                    "previous_versions": []
+                })
 
     @commands.command(name="reginald_recall", help="Recalls what Reginald knows about a user.")
     async def recall_user(self, ctx, user: discord.User):
