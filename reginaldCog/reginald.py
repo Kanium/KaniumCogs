@@ -133,7 +133,7 @@ class ReginaldCog(commands.Cog):
                 # ✅ Store updated short-term memory back
                 short_memory[channel_id] = memory
 
-        await ctx.send(response_text[:2000])
+        await self.send_split_message(ctx, response_text)
 
 
 
@@ -146,8 +146,6 @@ class ReginaldCog(commands.Cog):
             "Avoid unnecessary flavor text but ensure all critical meaning and context are retained. Summarize each topic distinctly, avoiding generalization. "
             "Prioritize compression while keeping essential nuances intact."
         )
-
-
 
         summary_text = "\n".join(f"{msg['user']}: {msg['content']}" for msg in messages)
 
@@ -374,7 +372,7 @@ class ReginaldCog(commands.Cog):
                 f"📝 **Summary:**\n```{selected_summary['summary']}```"
             )
 
-            await self.send_long_message(ctx, formatted_summary, prefix="📜 ")
+            await self.send_long_message(ctx, formatted_summary)
 
     @commands.command(name="reginald_summaries", help="Lists available summaries for this channel.")
     async def list_mid_term_summaries(self, ctx):
@@ -393,15 +391,55 @@ class ReginaldCog(commands.Cog):
 
             await ctx.send(f"📚 **Available Summaries:**\n{summary_list[:2000]}")
 
-    async def send_long_message(self, ctx, message, prefix=""):
+    async def send_long_message(self, ctx, message, prefix: str = ""):
         """Splits and sends a long message to avoid Discord's 2000-character limit."""
-        chunk_size = 1990  # Leave some space for formatting
+        chunk_size = 1900  # Leave some space for formatting
         if prefix:
             prefix_length = len(prefix)
             chunk_size -= prefix_length
 
         for i in range(0, len(message), chunk_size):
             chunk = message[i:i + chunk_size]
+            await ctx.send(f"{prefix}{chunk}")
+
+
+        
+    async def send_split_message(ctx, content: str, prefix: str = ""):
+        """
+        A unified function to handle sending long messages on Discord, ensuring they don't exceed the 2,000-character limit.
+
+        Parameters:
+        - ctx: Discord command context (for sending messages)
+        - content: The message content to send
+        - prefix: Optional prefix for each message part (e.g., "📜 Summary:")
+        """
+        # Discord message character limit (allowing a safety buffer)
+        CHUNK_SIZE = 1900  # Slightly below 2000 to account for formatting/prefix
+
+        if prefix:
+            CHUNK_SIZE -= len(prefix)  # Adjust chunk size if a prefix is used
+
+        # If the message is short enough, send it directly
+        if len(content) <= CHUNK_SIZE:
+            await ctx.send(f"{prefix}{content}")
+            return
+
+        # Splitting the message into chunks
+        chunks = []
+        while len(content) > 0:
+            # Find a good breaking point (preferably at a sentence or word break)
+            split_index = content.rfind("\n", 0, CHUNK_SIZE)
+            if split_index == -1:
+                split_index = content.rfind(" ", 0, CHUNK_SIZE)
+            if split_index == -1:
+                split_index = CHUNK_SIZE  # Fallback to max chunk size
+
+            # Extract chunk and trim remaining content
+            chunks.append(content[:split_index].strip())
+            content = content[split_index:].strip()
+
+        # Send chunks sequentially
+        for chunk in chunks:
             await ctx.send(f"{prefix}{chunk}")
 
 async def setup(bot):
