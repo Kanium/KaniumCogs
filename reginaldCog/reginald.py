@@ -108,7 +108,7 @@ class ReginaldCog(commands.Cog):
                 if len(memory) > self.short_term_memory_limit:
 
                     # 🔹 Generate a summary of the short-term memory
-                    summary = await self.summarize_memory(memory)
+                    summary = await self.summarize_memory(ctx, memory)
 
                     # 🔹 Ensure mid-term memory exists for the channel
                     mid_memory.setdefault(channel_id, [])
@@ -137,7 +137,7 @@ class ReginaldCog(commands.Cog):
 
 
 
-    async def summarize_memory(self, messages):
+    async def summarize_memory(self, ctx, messages):
         """✅ Generates a summary of past conversations for mid-term storage."""
         summary_prompt = (
             "Analyze and summarize the following conversation in a way that retains key details, nuances, and unique insights. "
