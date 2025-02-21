@@ -161,7 +161,7 @@ class ReginaldCog(commands.Cog):
             response = await client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "system", "content": summary_prompt}, {"role": "user", "content": summary_text}],
-                max_tokens=256
+                max_tokens=1024
             )
 
             summary_content = response.choices[0].message.content.strip()
