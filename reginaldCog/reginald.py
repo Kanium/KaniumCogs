@@ -149,15 +149,45 @@ class ReginaldCog(commands.Cog):
         summary_text = "\n".join(f"{msg['user']}: {msg['content']}" for msg in messages)
 
         try:
-            client = openai.AsyncClient(api_key=await self.config.openai_model())
+            api_key = await self.config.guild(ctx.guild).openai_api_key()
+            if not api_key:
+                print("🛠️ DEBUG: No API key found for summarization.")
+                return (
+                    "It appears that I have not been furnished with the necessary credentials to carry out this task. "
+                    "Might I suggest consulting an administrator to rectify this unfortunate oversight?"
+                )
+
+            client = openai.AsyncClient(api_key=api_key)
             response = await client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "system", "content": summary_prompt}, {"role": "user", "content": summary_text}],
                 max_tokens=256
             )
-            return response.choices[0].message.content.strip()
-        except OpenAIError:
-            return "Summary unavailable due to an error."
+
+            summary_content = response.choices[0].message.content.strip()
+
+            if not summary_content:
+                print("🛠️ DEBUG: Empty summary received from OpenAI.")
+                return (
+                    "Ah, an unusual predicament indeed! It seems that my attempt at summarization has resulted in "
+                    "a void of information. I shall endeavor to be more verbose next time."
+                )
+
+            return summary_content
+
+        except OpenAIError as e:
+            error_message = f"OpenAI Error: {e}"
+            print(f"🛠️ DEBUG: {error_message}")  # Log error to console
+
+            reginald_responses = [
+                f"Regrettably, I must inform you that I have encountered a bureaucratic obstruction whilst attempting to summarize:\n\n```{error_message}```",
+                f"It would seem that a most unfortunate technical hiccup has befallen my faculties in the matter of summarization:\n\n```{error_message}```",
+                f"Ah, it appears I have received an urgent memorandum stating that my summarization efforts have been thwarted:\n\n```{error_message}```",
+                f"I regret to inform you that my usual eloquence is presently obstructed by an unforeseen complication while summarizing:\n\n```{error_message}```"
+            ]
+
+            return random.choice(reginald_responses)
+
         
     def extract_topics_from_summary(self, summary):
         """Dynamically extracts the most important topics from a summary."""
