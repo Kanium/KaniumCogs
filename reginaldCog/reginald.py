@@ -156,14 +156,27 @@ class ReginaldCog(commands.Cog):
             return "Summary unavailable due to an error."
         
     def extract_topics_from_summary(self, summary):
-        keywords = re.findall(r"\b\w+\b", summary.lower())  # Extract words
-        common_topics = {"chess", "investing", "Vikings", "history", "Kanium", "gaming"}
-        topics = [word for word in keywords if word in common_topics]
-        return topics[:5]  # Limit to 5 topic tags
+        """Dynamically extracts the most important topics from a summary."""
+
+        # 🔹 Extract all words from summary
+        keywords = re.findall(r"\b\w+\b", summary.lower())
+
+        # 🔹 Count word occurrences
+        word_counts = Counter(keywords)
+
+        # 🔹 Remove unimportant words (common filler words)
+        stop_words = {"the", "and", "of", "in", "to", "is", "on", "for", "with", "at", "by", "it", "this", "that"}
+        filtered_words = {word: count for word, count in word_counts.items() if word not in stop_words and len(word) > 2}
+
+        # 🔹 Take the 5 most frequently used words as "topics"
+        topics = sorted(filtered_words, key=filtered_words.get, reverse=True)[:5]
+
+        return topics
 
     def select_relevant_summaries(self, summaries, prompt):
+        max_summaries = 5 if len(prompt) > 50 else 3  # Use more summaries if prompt is long
         relevant = [entry for entry in summaries if any(topic in prompt.lower() for topic in entry["topics"])]
-        return relevant[:3]  # Limit to 3 relevant summaries
+        return relevant[:max_summaries]
 
 
     async def generate_response(self, api_key, messages):
