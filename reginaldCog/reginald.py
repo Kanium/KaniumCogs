@@ -164,7 +164,7 @@ class ReginaldCog(commands.Cog):
             response = await client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "system", "content": summary_prompt}, {"role": "user", "content": summary_text}],
-                max_tokens=1024
+                max_tokens=2048
             )
 
             summary_content = response.choices[0].message.content.strip()
@@ -223,7 +223,7 @@ class ReginaldCog(commands.Cog):
             response = await client.chat.completions.create(
                 model=model,
                 messages=messages,
-                max_tokens=1024,
+                max_tokens=4112,
                 temperature=0.7,
                 presence_penalty=0.5,
                 frequency_penalty=0.5
@@ -374,7 +374,7 @@ class ReginaldCog(commands.Cog):
                 f"📝 **Summary:**\n```{selected_summary['summary']}```"
             )
 
-            await ctx.send(formatted_summary[:2000])  # Discord message limit safeguard
+            await self.send_long_message(ctx, formatted_summary, prefix="📜 ")
 
     @commands.command(name="reginald_summaries", help="Lists available summaries for this channel.")
     async def list_mid_term_summaries(self, ctx):
@@ -393,6 +393,16 @@ class ReginaldCog(commands.Cog):
 
             await ctx.send(f"📚 **Available Summaries:**\n{summary_list[:2000]}")
 
+    async def send_long_message(self, ctx, message, prefix=""):
+        """Splits and sends a long message to avoid Discord's 2000-character limit."""
+        chunk_size = 1990  # Leave some space for formatting
+        if prefix:
+            prefix_length = len(prefix)
+            chunk_size -= prefix_length
+
+        for i in range(0, len(message), chunk_size):
+            chunk = message[i:i + chunk_size]
+            await ctx.send(f"{prefix}{chunk}")
 
 async def setup(bot):
     """✅ Correct async cog setup for Redbot"""
