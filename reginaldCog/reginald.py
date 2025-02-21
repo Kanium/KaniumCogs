@@ -80,9 +80,13 @@ class ReginaldCog(commands.Cog):
                 ]
 
                 if user_profile:
+                    facts_text = "\n".join(
+                        f"- {fact['fact']} (First noted: {fact['timestamp']}, Last updated: {fact['last_updated']})"
+                        for fact in user_profile.get("facts", [])
+                    )
                     formatted_messages.append({
                         "role": "system",
-                        "content": f"Knowledge about {user_name}: {user_profile.get('summary', 'No detailed memory yet.')}"
+                        "content": f"Knowledge about {user_name}:\n{facts_text or 'No detailed memory yet.'}"
                     })
 
                 relevant_summaries = self.select_relevant_summaries(mid_term_summaries, prompt)
@@ -345,7 +349,7 @@ class ReginaldCog(commands.Cog):
         await ctx.send(status_message)
 
 
-    async def update_long_term_memory(self, user_id: str, fact: str, source_message: str, timestamp: str):
+    async def update_long_term_memory(self, ctx, user_id: str, fact: str, source_message: str, timestamp: str):
         """Ensures long-term memory updates are structured, preventing overwrites and tracking historical changes."""
 
         async with self.config.guild(ctx.guild).long_term_profiles() as long_memory:
@@ -354,38 +358,45 @@ class ReginaldCog(commands.Cog):
 
             user_facts = long_memory[user_id]["facts"]
 
-            # Check if similar fact already exists
+            # Check if fact already exists
             for entry in user_facts:
                 if entry["fact"].lower() == fact.lower():
-                    # If the fact already exists, do nothing
+                    # ✅ If fact exists, just update the timestamp
+                    entry["last_updated"] = timestamp
                     return
 
-            # Check for conflicting facts (facts about same topic but different info)
+            # Check for conflicting facts (same topic but different details)
             conflicting_entry = None
             for entry in user_facts:
-                if fact.split(" ")[0].lower() in entry["fact"].lower():  # Match topic keyword
+                existing_keywords = set(entry["fact"].lower().split())
+                new_keywords = set(fact.lower().split())
+
+                # If there's significant overlap in keywords, assume it's a conflicting update
+                if len(existing_keywords & new_keywords) >= 2:
                     conflicting_entry = entry
                     break
 
             if conflicting_entry:
-                # If contradiction found, update it instead of overwriting
-                conflicting_entry["updated"] = timestamp
+                # ✅ If contradiction found, archive the previous version
                 conflicting_entry["previous_versions"].append({
                     "fact": conflicting_entry["fact"],
                     "source": conflicting_entry["source"],
                     "timestamp": conflicting_entry["timestamp"]
                 })
-                conflicting_entry["fact"] = fact  # Store latest info
+                conflicting_entry["fact"] = fact  # Store the latest fact
                 conflicting_entry["source"] = source_message
                 conflicting_entry["timestamp"] = timestamp
+                conflicting_entry["last_updated"] = timestamp
             else:
-                # Otherwise, add as new fact
+                # ✅ Otherwise, add it as a new fact
                 user_facts.append({
                     "fact": fact,
                     "source": source_message,
                     "timestamp": timestamp,
+                    "last_updated": timestamp,
                     "previous_versions": []
                 })
+
 
     @commands.command(name="reginald_recall", help="Recalls what Reginald knows about a user.")
     async def recall_user(self, ctx, user: discord.User):
