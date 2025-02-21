@@ -14,7 +14,7 @@ class ReginaldCog(commands.Cog):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=71717171171717)
         self.memory_locks = {}  # ✅ Prevents race conditions per channel
-        self.short_term_memory_limit = 100  # Default value, can be changed dynamically
+        self.short_term_memory_limit = 30  # Default value, can be changed dynamically
 
         # ✅ Properly Registered Configuration Keys
         default_global = {"openai_model": "gpt-4o-mini"}
@@ -140,15 +140,13 @@ class ReginaldCog(commands.Cog):
     async def summarize_memory(self, ctx, messages):
         """✅ Generates a summary of past conversations for mid-term storage."""
         summary_prompt = (
-            "Summarize the following conversation with a focus on efficiency and clarity. "
-            "Compress information intelligently—prioritize key details, decisions, unique insights, and user contributions. "
-            "Maintain resolution: avoid excessive generalization. "
-            "Structure the summary into distinct topics with clear subpoints. "
-            "Ensure that individual opinions, disagreements, and conclusions are retained. "
-            "If multiple topics exist, separate them clearly rather than blending them into one. "
-            "Omit filler words, excessive pleasantries, and redundant phrases. "
-            "Ensure the summary is direct, well-structured, and information-dense."
+            "Condense the following conversation into an efficient, structured summary that maximizes information density while minimizing token usage. "
+            "Focus on key insights, decisions, disputes, and facts, ensuring clarity and conciseness without excessive detail. "
+            "Categorize information into: (1) Agreed Conclusions, (2) Disputed Points, (3) Notable User Contributions, and (4) Miscellaneous Context. "
+            "Avoid unnecessary flavor text but ensure all critical meaning and context are retained. Summarize each topic distinctly, avoiding generalization. "
+            "Prioritize compression while keeping essential nuances intact."
         )
+
 
 
         summary_text = "\n".join(f"{msg['user']}: {msg['content']}" for msg in messages)
