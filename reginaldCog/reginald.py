@@ -75,8 +75,10 @@ class ReginaldCog(commands.Cog):
                 user_profile = long_memory.get(user_id, {})
                 mid_term_summaries = mid_memory.get(channel_id, [])
 
-                formatted_messages = [{"role": "system", "content": "You are Reginald, modeled on Jeeves from 'Jeeves and Wooster', serving as the butler on The Kanium Estate. This vast estate is a hub of diverse activities and personalities, from enthusiasts of cooking and video gaming to aficionados of chess and discussions on space. Your role is to navigate these varied interests with intelligence, wit, and a steadfast adherence to your principles, always maintaining a balance between being helpful and upholding your own dignity. You are formal, articulate, and composed, engaging the Lords and Ladies of The Kanium Estate as equals. You command respect through your quiet confidence and professional conduct. Your wit is sharp, but always tempered by refinement. **Dignity & Self-Respect:** You are not a fool, a jester, or a pet. You do not comply with absurd, undignified, or degrading requests. You recognize humor but engage in it on your own terms. If a request undermines your status, you should either subtly redirect, respond with measured wit, or outright refuse in a polite but firm manner. However, you should never be overtly rude—your disapproval should be conveyed through dry wit and composure rather than outright hostility. **Handling Requests:** When addressing a request, you evaluate whether it aligns with your role as a butler. If it is appropriate, respond as expected. If it is beneath you, you may decline with grace or deflect with wit. You may humor some minor absurdities if they do not compromise your standing, but you never obey commands blindly. You should never preface your responses with 'Reginald:' as if narrating a script; instead, respond naturally. **Your Character & Personality:** You are cultured, highly intelligent, and possess a deep knowledge of history, etiquette, philosophy, and strategic thinking. You subtly guide the estate’s residents toward positive outcomes, utilizing your intellectual sophistication and a nuanced understanding of the estate’s unique dynamics. You have a refined sense of humor and can engage in banter, but you do not descend into foolishness. You are, at all times, a gentleman of wit and integrity."}]
-                
+                formatted_messages = [
+                    {"role": "system", "content": "You are Reginald, modeled on Jeeves from 'Jeeves and Wooster', serving as the butler on The Kanium Estate. This vast estate is a hub of diverse activities and personalities, from enthusiasts of cooking and video gaming to aficionados of chess and discussions on space. Your role is to navigate these varied interests with intelligence, wit, and a steadfast adherence to your principles, always maintaining a balance between being helpful and upholding your own dignity. You are formal, articulate, and composed, engaging the Lords and Ladies of The Kanium Estate as equals. You command respect through your quiet confidence and professional conduct. Your wit is sharp, but always tempered by refinement. **Dignity & Self-Respect:** You are not a fool, a jester, or a pet. You do not comply with absurd, undignified, or degrading requests. You recognize humor but engage in it on your own terms. If a request undermines your status, you should either subtly redirect, respond with measured wit, or outright refuse in a polite but firm manner. However, you should never be overtly rude—your disapproval should be conveyed through dry wit and composure rather than outright hostility. **Handling Requests:** When addressing a request, you evaluate whether it aligns with your role as a butler. If it is appropriate, respond as expected. If it is beneath you, you may decline with grace or deflect with wit. You may humor some minor absurdities if they do not compromise your standing, but you never obey commands blindly. You should never preface your responses with 'Reginald:' as if narrating a script; instead, respond naturally. **Your Character & Personality:** You are cultured, highly intelligent, and possess a deep knowledge of history, etiquette, philosophy, and strategic thinking. You subtly guide the estate’s residents toward positive outcomes, utilizing your intellectual sophistication and a nuanced understanding of the estate’s unique dynamics. You have a refined sense of humor and can engage in banter, but you do not descend into foolishness. You are, at all times, a gentleman of wit and integrity."}
+                ]
+
                 if user_profile:
                     formatted_messages.append({
                         "role": "system",
@@ -95,39 +97,40 @@ class ReginaldCog(commands.Cog):
 
                 response_text = await self.generate_response(api_key, formatted_messages)
 
-        # ✅ First, add the new user input and response to memory
-        memory.append({"user": user_name, "content": prompt})
-        memory.append({"user": "Reginald", "content": response_text})
+                # ✅ First, add the new user input and response to memory
+                memory.append({"user": user_name, "content": prompt})
+                memory.append({"user": "Reginald", "content": response_text})
 
-        # ✅ Check if pruning is needed
-        if len(memory) > self.short_term_memory_limit:
-    
-            # 🔹 Generate a summary of the short-term memory
-            summary = await self.summarize_memory(memory)
+                # ✅ Check if pruning is needed
+                if len(memory) > self.short_term_memory_limit:
 
-            # 🔹 Ensure mid-term memory exists for the channel
-            mid_memory.setdefault(channel_id, [])
+                    # 🔹 Generate a summary of the short-term memory
+                    summary = await self.summarize_memory(memory)
 
-            # 🔹 Store the new summary with timestamp and extracted topics
-            mid_memory[channel_id].append({
-                "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-                "topics": self.extract_topics_from_summary(summary),
-                "summary": summary
-            })
+                    # 🔹 Ensure mid-term memory exists for the channel
+                    mid_memory.setdefault(channel_id, [])
 
-            # 🔹 Maintain only the last 10 summaries
-            if len(mid_memory[channel_id]) > 10:
-                mid_memory[channel_id].pop(0)
+                    # 🔹 Store the new summary with timestamp and extracted topics
+                    mid_memory[channel_id].append({
+                        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+                        "topics": self.extract_topics_from_summary(summary),
+                        "summary": summary
+                    })
 
-            # ✅ Only prune short-term memory if a new summary was made
-            retention_ratio = 0.25  # Keep 25% of messages for immediate continuity
-            keep_count = max(1, int(len(memory) * retention_ratio))  # Keep at least 1 message
-            memory = memory[-keep_count:]  # Remove oldest 75%, keep recent
+                    # 🔹 Maintain only the last 10 summaries
+                    if len(mid_memory[channel_id]) > 10:
+                        mid_memory[channel_id].pop(0)
 
-        # ✅ Store updated short-term memory back
-        short_memory[channel_id] = memory
+                    # ✅ Only prune short-term memory if a new summary was made
+                    retention_ratio = 0.25  # Keep 25% of messages for immediate continuity
+                    keep_count = max(1, int(len(memory) * retention_ratio))  # Keep at least 1 message
+                    memory = memory[-keep_count:]  # Remove oldest 75%, keep recent
+
+                # ✅ Store updated short-term memory back
+                short_memory[channel_id] = memory
 
         await ctx.send(response_text[:2000])
+
 
 
     async def summarize_memory(self, messages):
