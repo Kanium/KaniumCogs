@@ -297,6 +297,52 @@ class ReginaldCog(commands.Cog):
         """Displays the current short-term memory limit."""
         await ctx.send(f"📏 **Current Short-Term Memory Limit:** {self.short_term_memory_limit} messages.")
 
+    @commands.command(name="reginald_summary", help="Displays a selected mid-term summary for this channel.")
+    async def get_mid_term_summary(self, ctx, index: int):
+        """Fetch and display a specific mid-term memory summary by index."""
+        async with self.config.guild(ctx.guild).mid_term_memory() as mid_memory:
+            summaries = mid_memory.get(str(ctx.channel.id), [])
+
+            # Check if there are summaries
+            if not summaries:
+                await ctx.send("⚠️ No summaries available for this channel.")
+                return
+
+            # Validate index (1-based for user-friendliness)
+            if index < 1 or index > len(summaries):
+                await ctx.send(f"⚠️ Invalid index. Please provide a number between **1** and **{len(summaries)}**.")
+                return
+
+            # Fetch the selected summary
+            selected_summary = summaries[index - 1]  # Convert to 0-based index
+            
+            # Format output
+            formatted_summary = (
+                f"📜 **Summary {index} of {len(summaries)}**\n"
+                f"📅 **Date:** {selected_summary['timestamp']}\n"
+                f"🔍 **Topics:** {', '.join(selected_summary['topics']) or 'None'}\n"
+                f"📝 **Summary:**\n```{selected_summary['summary']}```"
+            )
+
+            await ctx.send(formatted_summary[:2000])  # Discord message limit safeguard
+
+    @commands.command(name="reginald_summaries", help="Lists available summaries for this channel.")
+    async def list_mid_term_summaries(self, ctx):
+        """Displays a brief list of all available mid-term memory summaries."""
+        async with self.config.guild(ctx.guild).mid_term_memory() as mid_memory:
+            summaries = mid_memory.get(str(ctx.channel.id), [])
+
+            if not summaries:
+                await ctx.send("⚠️ No summaries available for this channel.")
+                return
+
+            summary_list = "\n".join(
+                f"**{i+1}.** 📅 {entry['timestamp']} | 🔍 Topics: {', '.join(entry['topics']) or 'None'}"
+                for i, entry in enumerate(summaries)
+            )
+
+            await ctx.send(f"📚 **Available Summaries:**\n{summary_list[:2000]}")
+
 
 async def setup(bot):
     """✅ Correct async cog setup for Redbot"""
