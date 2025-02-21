@@ -206,7 +206,7 @@ class ReginaldCog(commands.Cog):
         word_counts = Counter(keywords)
 
         # 🔹 Remove unimportant words (common filler words)
-        stop_words = {"the", "and", "of", "in", "to", "is", "on", "for", "with", "at", "by", "it", "this", "that"}
+        stop_words = {"the", "and", "of", "in", "to", "is", "on", "for", "with", "at", "by", "it", "this", "that", "his", "her"}
         filtered_words = {word: count for word, count in word_counts.items() if word not in stop_words and len(word) > 2}
 
         # 🔹 Take the 5 most frequently used words as "topics"
@@ -215,9 +215,24 @@ class ReginaldCog(commands.Cog):
         return topics
 
     def select_relevant_summaries(self, summaries, prompt):
-        max_summaries = 5 if len(prompt) > 50 else 3  # Use more summaries if prompt is long
-        relevant = [entry for entry in summaries if any(topic in prompt.lower() for topic in entry["topics"])]
-        return relevant[:max_summaries]
+        """Selects the most relevant summaries based on topic matching, frequency, and recency weighting."""
+
+        max_summaries = 5 if len(prompt) > 50 else 3  # Use more summaries if the prompt is long
+        current_time = datetime.datetime.now()
+
+        def calculate_weight(summary):
+            """Calculate a weighted score for a summary based on relevance, recency, and frequency."""
+            topic_match = sum(1 for topic in summary["topics"] if topic in prompt.lower())  # Context match score
+            frequency_score = len(summary["topics"])  # More topics = likely more important
+            timestamp = datetime.datetime.strptime(summary["timestamp"], "%Y-%m-%d %H:%M")
+            recency_factor = max(0.1, 1 - ((current_time - timestamp).days / 365))  # Older = lower weight
+
+            return (topic_match * 2) + (frequency_score * 1.5) + (recency_factor * 3)
+
+        # Apply the weighting function and sort by highest weight
+        weighted_summaries = sorted(summaries, key=calculate_weight, reverse=True)
+
+        return weighted_summaries[:max_summaries]  # Return the top-scoring summaries
 
 
     async def generate_response(self, api_key, messages):
