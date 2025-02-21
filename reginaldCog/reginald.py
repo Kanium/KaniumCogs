@@ -101,6 +101,9 @@ class ReginaldCog(commands.Cog):
                 memory.append({"user": user_name, "content": prompt})
                 memory.append({"user": "Reginald", "content": response_text})
 
+                # ✅ Ensure a minimum of 10 short-term messages are always retained
+                MINIMUM_SHORT_TERM_MESSAGES = 10
+
                 # ✅ Check if pruning is needed
                 if len(memory) > self.short_term_memory_limit:
 
@@ -121,10 +124,11 @@ class ReginaldCog(commands.Cog):
                     if len(mid_memory[channel_id]) > 10:
                         mid_memory[channel_id].pop(0)
 
-                    # ✅ Only prune short-term memory if a new summary was made
-                    retention_ratio = 0.25  # Keep 25% of messages for immediate continuity
-                    keep_count = max(1, int(len(memory) * retention_ratio))  # Keep at least 1 message
-                    memory = memory[-keep_count:]  # Remove oldest 75%, keep recent
+                    # ✅ Ensure at least 10 short-term messages remain after pruning
+                    retention_ratio = 0.25  # Default: Keep 25% of messages for continuity
+                    keep_count = max(MINIMUM_SHORT_TERM_MESSAGES, int(len(memory) * retention_ratio))
+
+                    memory = memory[-keep_count:]  # Remove oldest messages but keep at least 10
 
                 # ✅ Store updated short-term memory back
                 short_memory[channel_id] = memory
