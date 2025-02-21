@@ -138,13 +138,15 @@ class ReginaldCog(commands.Cog):
 
 
     async def summarize_memory(self, ctx, messages):
-        """✅ Generates a summary of past conversations for mid-term storage."""
+        """✅ Generates a structured, compact summary of past conversations for mid-term storage."""
         summary_prompt = (
-            "Condense the following conversation into an efficient, structured summary that maximizes information density while minimizing token usage. "
-            "Focus on key insights, decisions, disputes, and facts, ensuring clarity and conciseness without excessive detail. "
-            "Categorize information into: (1) Agreed Conclusions, (2) Disputed Points, (3) Notable User Contributions, and (4) Miscellaneous Context. "
-            "Avoid unnecessary flavor text but ensure all critical meaning and context are retained. Summarize each topic distinctly, avoiding generalization. "
-            "Prioritize compression while keeping essential nuances intact."
+            "Summarize the following conversation into a structured, concise format that retains key details while maximizing brevity. "
+            "The summary should be **organized** into clear sections: "
+            "\n\n📌 **Key Takeaways:** Important facts or conclusions reached."
+            "\n🔹 **Disputed Points:** Areas where opinions or facts conflicted."
+            "\n🗣️ **Notable User Contributions:** Key statements from users that shaped the discussion."
+            "\n📜 **Additional Context:** Any other relevant information."
+            "\n\nEnsure the summary is **dense but not overly verbose**. Avoid unnecessary repetition while keeping essential meaning intact."
         )
 
         summary_text = "\n".join(f"{msg['user']}: {msg['content']}" for msg in messages)
@@ -161,7 +163,10 @@ class ReginaldCog(commands.Cog):
             client = openai.AsyncClient(api_key=api_key)
             response = await client.chat.completions.create(
                 model="gpt-4o-mini",
-                messages=[{"role": "system", "content": summary_prompt}, {"role": "user", "content": summary_text}],
+                messages=[
+                    {"role": "system", "content": summary_prompt},
+                    {"role": "user", "content": summary_text}
+                ],
                 max_tokens=2048
             )
 
@@ -179,7 +184,7 @@ class ReginaldCog(commands.Cog):
         except OpenAIError as e:
             error_message = f"OpenAI Error: {e}"
             print(f"🛠️ DEBUG: {error_message}")  # Log error to console
-
+    
             reginald_responses = [
                 f"Regrettably, I must inform you that I have encountered a bureaucratic obstruction whilst attempting to summarize:\n\n```{error_message}```",
                 f"It would seem that a most unfortunate technical hiccup has befallen my faculties in the matter of summarization:\n\n```{error_message}```",
@@ -188,6 +193,7 @@ class ReginaldCog(commands.Cog):
             ]
 
             return random.choice(reginald_responses)
+
 
         
     def extract_topics_from_summary(self, summary):
