@@ -338,10 +338,11 @@ class ReginaldCog(commands.Cog):
             response_data = response.choices[0].message
 
             # 🟢 Check if OpenAI returned a function call
-            if response_data.get("function_call"):
-                function_call = response_data["function_call"]
-                function_name = function_call["name"]
-                function_args = json.loads(function_call["arguments"])  # Convert JSON string to dict
+            if hasattr(response_data, "function_call") and response_data.function_call:
+                function_call = response_data.function_call
+
+                function_name = function_call.name
+                function_args = json.loads(function_call.arguments)  # Convert JSON string to dict
 
                 # 🟢 Call the appropriate function
                 if function_name == "set_board":
