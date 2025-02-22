@@ -8,11 +8,15 @@ class ChessHandler:
     def __init__(self):
         self.active_games = {}  # {user_id: FEN string}
 
-    def set_board(self, user_id: str, fen: str):
-        """Sets a board to a given FEN string for a user."""
+    async def set_board(self, user_id: str, fen: str):
+        """Sets a board to a given FEN string for a user and saves it in long-term memory."""
         try:
             board = chess.Board(fen)  # Validate FEN
             self.active_games[user_id] = fen
+
+            async with self.config.guild(ctx.guild).long_term_profiles() as long_memory:
+                long_memory[user_id] = {"fen": fen}  # Store in long-term memory
+
             return f"Board state updated successfully:\n```{fen}```"
         except ValueError:
             return "⚠️ Invalid FEN format. Please provide a valid board state."
@@ -27,9 +31,10 @@ class ChessHandler:
         fen = self.active_games.get(user_id, chess.STARTING_FEN)
         return chess.Board(fen)
 
-    def get_fen(self, user_id: str):
-        """Returns the current FEN of the user's board."""
-        return self.active_games.get(user_id, chess.STARTING_FEN)
+    async def get_fen(self, user_id: str):
+        """Returns the current FEN of the user's board, using long-term memory."""
+        async with self.config.guild(ctx.guild).long_term_profiles() as long_memory:
+            return long_memory.get(user_id, {}).get("fen", chess.STARTING_FEN)
 
     def make_move(self, user_id: str, move: str):
         """Attempts to execute a move and checks if the game is over."""
