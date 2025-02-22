@@ -8,6 +8,9 @@ import traceback
 from collections import Counter
 from redbot.core import Config, commands
 from openai import OpenAIError
+from .chess_addon import ChessHandler
+
+chess_handler = ChessHandler()
 
 class ReginaldCog(commands.Cog):
     def __init__(self, bot):
@@ -271,24 +274,91 @@ class ReginaldCog(commands.Cog):
 
         return None  # No strong fact found
 
-    async def generate_response(self, api_key, messages):
+    async def generate_response(self, api_key, messages, ctx):
+        """Handles AI responses and function calling for chess interactions."""
+    
         model = await self.config.openai_model()
+
         try:
             client = openai.AsyncClient(api_key=api_key)
             response = await client.chat.completions.create(
                 model=model,
                 messages=messages,
-                max_tokens=4112,
+                max_tokens=1500,  # Balanced token limit to allow function execution & flavor text
                 temperature=0.7,
                 presence_penalty=0.5,
-                frequency_penalty=0.5
+                frequency_penalty=0.5,
+                functions=[
+                    {
+                        "name": "set_board",
+                        "description": "Sets up the chessboard to a given FEN string.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "fen": {"type": "string", "description": "The FEN string representing the board state."}
+                            },
+                            "required": ["fen"]
+                        }
+                    },
+                    {
+                        "name": "make_move",
+                        "description": "Executes a chess move for the current game.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "move": {"type": "string", "description": "The move in SAN format (e.g., 'e2e4')."}
+                            },
+                            "required": ["move"]
+                        }
+                    },
+                    {
+                        "name": "reset_board",
+                        "description": "Resets the chessboard to the default starting position.",
+                        "parameters": {}
+                    },
+                    {
+                        "name": "resign",
+                        "description": "Resigns from the current chess game.",
+                        "parameters": {}
+                    },
+                    {
+                        "name": "get_board_state_text",
+                        "description": "Retrieves the current board state as a FEN string.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "user_id": {"type": "string", "description": "The user's unique ID."}
+                            },
+                            "required": ["user_id"]
+                        }
+                    }
+                ]
             )
-            response_text = response.choices[0].message.content.strip()
-            if response_text.startswith("Reginald:"):
-                response_text = response_text[len("Reginald:"):].strip()
-            return response_text
 
-        except OpenAIError as e:
+            response_data = response.choices[0].message
+
+            # 🟢 Check if OpenAI returned a function call
+            if response_data.get("function_call"):
+                function_call = response_data["function_call"]
+                function_name = function_call["name"]
+                function_args = json.loads(function_call["arguments"])  # Convert JSON string to dict
+
+                # 🟢 Call the appropriate function
+                if function_name == "set_board":
+                    return chess_handler.set_board(ctx.author.id, function_args["fen"])
+                elif function_name == "make_move":
+                    return chess_handler.make_move(ctx.author.id, function_args["move"])
+                elif function_name == "reset_board":
+                    return chess_handler.reset_board(ctx.author.id)
+                elif function_name == "resign":
+                    return chess_handler.resign(ctx.author.id)
+                elif function_name == "get_board_state_text":
+                    return chess_handler.get_fen(ctx.author.id)  # Returns FEN string of the board
+
+            # 🟢 If no function was called, return AI-generated response with flavor text
+            return response_data.get("content", "I'm afraid I have nothing to say.")
+
+        except openai.OpenAIError as e:
             error_message = f"OpenAI Error: {e}"
             reginald_responses = [
                 f"Regrettably, I must inform you that I have encountered a bureaucratic obstruction:\n\n```{error_message}```",
