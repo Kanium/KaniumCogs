@@ -102,7 +102,7 @@ class ReginaldCog(commands.Cog):
                 formatted_messages += [{"role": "user", "content": f"{entry['user']}: {entry['content']}"} for entry in memory]
                 formatted_messages.append({"role": "user", "content": f"{user_name}: {prompt}"})
 
-                response_text = await self.generate_response(api_key, formatted_messages)
+                response_text = await self.generate_response(api_key, formatted_messages, ctx)
 
                 # ✅ Extract potential long-term facts from Reginald's response
                 potential_fact = self.extract_fact_from_response(response_text)
