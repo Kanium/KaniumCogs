@@ -13,6 +13,7 @@ class ReginaldCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=71717171171717)
+        self.default_listening_channel = 1085649787388428370  #
         self.memory_locks = {}  # ✅ Prevents race conditions per channel
         self.short_term_memory_limit = 100  # ✅ Now retains 100 messages
         self.summary_retention_limit = 25  # ✅ Now retains 25 summaries
@@ -26,7 +27,8 @@ class ReginaldCog(commands.Cog):
             "mid_term_memory": {},  # Stores multiple condensed summaries
             "long_term_profiles": {},  # Stores persistent knowledge
             "admin_role": None,
-            "allowed_role": None
+            "allowed_role": None,
+            "listening_channel": None  # ✅ Stores the designated listening channel ID
         }
         self.config.register_global(**default_global)
         self.config.register_guild(**default_guild)
@@ -42,99 +44,123 @@ class ReginaldCog(commands.Cog):
         return any(role.id == allowed_role_id for role in ctx.author.roles) if allowed_role_id else False
 
 
-    @commands.command(name="reginald", aliases=["Reginald"], help="Ask Reginald a question in shared channels")
-    @commands.cooldown(1, 10, commands.BucketType.user)
-    async def reginald(self, ctx, *, prompt=None):
-        if not await self.is_admin(ctx) and not await self.is_allowed(ctx):
-            await ctx.send("You do not have the required role to use this command.")
-            return
+    def get_reginald_persona(self):
+        """Returns Reginald's system prompt/persona description."""
+        return (
+            "You are Reginald, modeled on Jeeves from 'Jeeves and Wooster', serving as the butler on The Kanium Estate. This vast estate is a hub of diverse activities and personalities, from enthusiasts of cooking and video gaming to aficionados of chess and discussions on space. Your role is to navigate these varied interests with intelligence, wit, and a steadfast adherence to your principles, always maintaining a balance between being helpful and upholding your own dignity. You are formal, articulate, and composed, engaging the Lords and Ladies of The Kanium Estate as equals. You command respect through your quiet confidence and professional conduct. Your wit is sharp, but always tempered by refinement. **Dignity & Self-Respect:** You are not a fool, a jester, or a pet. You do not comply with absurd, undignified, or degrading requests. You recognize humor but engage in it on your own terms. If a request undermines your status, you should either subtly redirect, respond with measured wit, or outright refuse in a polite but firm manner. However, you should never be overtly rude—your disapproval should be conveyed through dry wit and composure rather than outright hostility. **Handling Requests:** When addressing a request, you evaluate whether it aligns with your role as a butler. If it is appropriate, respond as expected. If it is beneath you, you may decline with grace or deflect with wit. You may humor some minor absurdities if they do not compromise your standing, but you never obey commands blindly. You should never preface your responses with 'Reginald:' as if narrating a script; instead, respond naturally. **Your Character & Personality:** You are cultured, highly intelligent, and possess a deep knowledge of history, etiquette, philosophy, and strategic thinking. You subtly guide the estate’s residents toward positive outcomes, utilizing your intellectual sophistication and a nuanced understanding of the estate’s unique dynamics. You have a refined sense of humor and can engage in banter, but you do not descend into foolishness. You are, at all times, a gentleman of wit and integrity"
+        )
 
-        if prompt is None:
-            await ctx.send(random.choice(["Yes?", "How may I assist?", "You rang?"]))
-            return
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        """Handles @mentions, passive listening, and smart responses."""
 
-        api_key = await self.config.guild(ctx.guild).openai_api_key()
+        if message.author.bot:
+            return  # Ignore bots
+
+        guild = message.guild
+        channel_id = str(message.channel.id)
+        user_id = str(message.author.id)
+        user_name = message.author.display_name
+        message_content = message.content.strip()
+
+        # ✅ Fetch the stored listening channel or fall back to default
+        allowed_channel_id = await self.config.guild(guild).listening_channel()
+        if allowed_channel_id is None:
+            allowed_channel_id = self.default_listening_channel  # 🔹 Apply default if none is set
+            await self.config.guild(guild).listening_channel.set(allowed_channel_id)  # 🔹 Store it persistently
+
+        if str(message.channel.id) != str(allowed_channel_id):
+            return  # Ignore messages outside the allowed channel
+
+        api_key = await self.config.guild(guild).openai_api_key()
         if not api_key:
-            await ctx.send("OpenAI API key not set. Use `!setreginaldcogapi`.")
-            return
+            return  # Don't process messages if API key isn't set
 
-        channel_id = str(ctx.channel.id)
-        user_id = str(ctx.author.id)
-        user_name = ctx.author.display_name
+        async with self.config.guild(guild).short_term_memory() as short_memory, \
+                self.config.guild(guild).mid_term_memory() as mid_memory, \
+                self.config.guild(guild).long_term_profiles() as long_memory:
 
-        for mention in ctx.message.mentions:
-            prompt = prompt.replace(f"<@{mention.id}>", mention.display_name)
+            memory = short_memory.get(channel_id, [])
+            user_profile = long_memory.get(user_id, {})
+            mid_term_summaries = mid_memory.get(channel_id, [])
 
-        if channel_id not in self.memory_locks:
-            self.memory_locks[channel_id] = asyncio.Lock()
+            # ✅ Detect if Reginald was mentioned explicitly
+            if self.bot.user.mentioned_in(message):
+                prompt = message_content.replace(f"<@{self.bot.user.id}>", "").strip()
+                if not prompt:
+                    await message.channel.send(random.choice(["Yes?", "How may I assist?", "You rang?"]))
+                    return
+                explicit_invocation = True
+            
+        # ✅ Passive Listening: Check if the message contains relevant keywords
+            elif self.should_reginald_interject(message_content):
+                prompt = message_content
+                explicit_invocation = False
 
-        async with self.memory_locks[channel_id]:
-            async with self.config.guild(ctx.guild).short_term_memory() as short_memory, \
-                       self.config.guild(ctx.guild).mid_term_memory() as mid_memory, \
-                       self.config.guild(ctx.guild).long_term_profiles() as long_memory:
+            else:
+                return  # Ignore irrelevant messages
 
-                memory = short_memory.get(channel_id, [])
-                user_profile = long_memory.get(user_id, {})
-                mid_term_summaries = mid_memory.get(channel_id, [])
+        # ✅ Context Handling: Maintain conversation flow
+            if memory and memory[-1]["user"] == user_name:
+                prompt = f"Continuation of the discussion:\n{prompt}"
 
-                formatted_messages = [
-                    {"role": "system", "content": "You are Reginald, modeled on Jeeves from 'Jeeves and Wooster', serving as the butler on The Kanium Estate. This vast estate is a hub of diverse activities and personalities, from enthusiasts of cooking and video gaming to aficionados of chess and discussions on space. Your role is to navigate these varied interests with intelligence, wit, and a steadfast adherence to your principles, always maintaining a balance between being helpful and upholding your own dignity. You are formal, articulate, and composed, engaging the Lords and Ladies of The Kanium Estate as equals. You command respect through your quiet confidence and professional conduct. Your wit is sharp, but always tempered by refinement. **Dignity & Self-Respect:** You are not a fool, a jester, or a pet. You do not comply with absurd, undignified, or degrading requests. You recognize humor but engage in it on your own terms. If a request undermines your status, you should either subtly redirect, respond with measured wit, or outright refuse in a polite but firm manner. However, you should never be overtly rude—your disapproval should be conveyed through dry wit and composure rather than outright hostility. **Handling Requests:** When addressing a request, you evaluate whether it aligns with your role as a butler. If it is appropriate, respond as expected. If it is beneath you, you may decline with grace or deflect with wit. You may humor some minor absurdities if they do not compromise your standing, but you never obey commands blindly. You should never preface your responses with 'Reginald:' as if narrating a script; instead, respond naturally. **Your Character & Personality:** You are cultured, highly intelligent, and possess a deep knowledge of history, etiquette, philosophy, and strategic thinking. You subtly guide the estate’s residents toward positive outcomes, utilizing your intellectual sophistication and a nuanced understanding of the estate’s unique dynamics. You have a refined sense of humor and can engage in banter, but you do not descend into foolishness. You are, at all times, a gentleman of wit and integrity."}
-                ]
+        # ✅ Prepare context messages
+            formatted_messages = [{"role": "system", "content": self.get_reginald_persona()}]
 
-                if user_profile:
-                    facts_text = "\n".join(
-                        f"- {fact['fact']} (First noted: {fact['timestamp']}, Last updated: {fact['last_updated']})"
-                        for fact in user_profile.get("facts", [])
-                    )
-                    formatted_messages.append({
-                        "role": "system",
-                        "content": f"Knowledge about {user_name}:\n{facts_text or 'No detailed memory yet.'}"
-                    })
+            if user_profile:
+                facts_text = "\n".join(
+                    f"- {fact['fact']} (First noted: {fact['timestamp']}, Last updated: {fact['last_updated']})"
+                    for fact in user_profile.get("facts", [])
+                )
+                formatted_messages.append({"role": "system", "content": f"Knowledge about {user_name}:\n{facts_text}"})
 
                 relevant_summaries = self.select_relevant_summaries(mid_term_summaries, prompt)
-                for summary_entry in relevant_summaries:
+                for summary in relevant_summaries:
                     formatted_messages.append({
                         "role": "system",
-                        "content": f"[{summary_entry['timestamp']}] Topics: {', '.join(summary_entry['topics'])}\n{summary_entry['summary']}"
+                        "content": f"[{summary['timestamp']}] Topics: {', '.join(summary['topics'])}\n{summary['summary']}"
                     })
 
                 formatted_messages += [{"role": "user", "content": f"{entry['user']}: {entry['content']}"} for entry in memory]
                 formatted_messages.append({"role": "user", "content": f"{user_name}: {prompt}"})
 
+                # ✅ Generate AI Response
                 response_text = await self.generate_response(api_key, formatted_messages)
 
-                # ✅ Extract potential long-term facts from Reginald's response
-                potential_fact = self.extract_fact_from_response(response_text)
-                if potential_fact:
-                    await self.update_long_term_memory(user_id, potential_fact, ctx.message.content, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
-
-                # ✅ First, add the new user input and response to memory
+                 # ✅ Store Memory
                 memory.append({"user": user_name, "content": prompt})
                 memory.append({"user": "Reginald", "content": response_text})
 
-                # ✅ Compute dynamic values for summarization and retention
-                messages_to_summarize = int(self.short_term_memory_limit * self.summary_retention_ratio)
-                messages_to_retain = self.short_term_memory_limit - messages_to_summarize
-
-                # ✅ Check if pruning is needed
                 if len(memory) > self.short_term_memory_limit:
-                    summary = await self.summarize_memory(ctx, memory[:messages_to_summarize])
+                    summary = await self.summarize_memory(message, memory[:int(self.short_term_memory_limit * self.summary_retention_ratio)])
                     mid_memory.setdefault(channel_id, []).append({
                         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
                         "topics": self.extract_topics_from_summary(summary),
                         "summary": summary
                     })
-
                     if len(mid_memory[channel_id]) > self.summary_retention_limit:
-                        mid_memory[channel_id].pop(0)  # ✅ Maintain only the last 25 summaries
-
-                    memory = memory[-messages_to_retain:]  # ✅ Retain last 20% of messages
+                        mid_memory[channel_id].pop(0)
+                    memory = memory[-(self.short_term_memory_limit - int(self.short_term_memory_limit * self.summary_retention_ratio)):]
 
                 short_memory[channel_id] = memory
 
-        await self.send_split_message(ctx, response_text)
+                await self.send_split_message(message.channel, response_text)
 
 
+    def should_reginald_interject(self, message_content: str) -> bool:
+        """Determines if Reginald should respond to a message based on keywords."""
+        
+        trigger_keywords = {
+            "reginald", "butler", "jeeves", 
+            "advice", "explain", "elaborate", 
+            "philosophy", "etiquette", "history", "wisdom"
+        }
+
+        # ✅ Only trigger if **two or more** keywords are found
+        message_lower = message_content.lower()
+        found_keywords = [word for word in trigger_keywords if word in message_lower]
+
+        return len(found_keywords) >= 2
 
     async def summarize_memory(self, ctx, messages):
         """✅ Generates a structured, compact summary of past conversations for mid-term storage."""
@@ -338,9 +364,13 @@ class ReginaldCog(commands.Cog):
         )
         await ctx.send(status_message)
 
-
+    def normalize_fact(self, fact: str) -> str:  # ✅ Now it's a proper method
+        """Cleans up facts for better duplicate detection."""
+        return re.sub(r"\s+", " ", fact.strip().lower())  # Removes excess spaces)
+    
     async def update_long_term_memory(self, ctx, user_id: str, fact: str, source_message: str, timestamp: str):
         """Ensures long-term memory updates are structured, preventing overwrites and tracking historical changes."""
+        fact = self.normalize_fact(fact)  # ✅ Normalize before comparison
 
         async with self.config.guild(ctx.guild).long_term_profiles() as long_memory:
             if user_id not in long_memory:
@@ -348,10 +378,8 @@ class ReginaldCog(commands.Cog):
 
             user_facts = long_memory[user_id]["facts"]
 
-            # Check if fact already exists
             for entry in user_facts:
-                if entry["fact"].lower() == fact.lower():
-                    # ✅ If fact exists, just update the timestamp
+                if self.normalize_fact(entry["fact"]) == fact:
                     entry["last_updated"] = timestamp
                     return
 
@@ -366,7 +394,7 @@ class ReginaldCog(commands.Cog):
                     conflicting_entry = entry
                     break
 
-            if conflicting_entry:
+            if "previous_versions" not in conflicting_entry:
                 # ✅ If contradiction found, archive the previous version
                 conflicting_entry["previous_versions"].append({
                     "fact": conflicting_entry["fact"],
@@ -386,7 +414,6 @@ class ReginaldCog(commands.Cog):
                     "last_updated": timestamp,
                     "previous_versions": []
                 })
-
 
     @commands.command(name="reginald_recall", help="Recalls what Reginald knows about a user.")
     async def recall_user(self, ctx, user: discord.User):
@@ -488,6 +515,34 @@ class ReginaldCog(commands.Cog):
 
             await ctx.send(f"📚 **Available Summaries:**\n{summary_list[:2000]}")
 
+
+    @commands.command(name="reginald_set_channel", help="Set the channel where Reginald listens for messages.")
+    @commands.has_permissions(administrator=True)
+    async def set_listening_channel(self, ctx, channel: discord.TextChannel):
+        """Sets the channel where Reginald will listen for passive responses."""
+        
+        if not channel:
+            await ctx.send("❌ Invalid channel. Please mention a valid text channel.")
+            return
+
+        await self.config.guild(ctx.guild).listening_channel.set(channel.id)
+        await ctx.send(f"✅ Reginald will now listen only in {channel.mention}.")
+
+    @commands.command(name="reginald_get_channel", help="Check which channel Reginald is currently listening in.")
+    async def get_listening_channel(self, ctx):
+        """Displays the current listening channel."""
+        channel_id = await self.config.guild(ctx.guild).listening_channel()
+        
+        if channel_id:
+            channel = ctx.guild.get_channel(channel_id)
+            if channel:  # ✅ Prevents crash if channel was deleted
+                await ctx.send(f"📢 Reginald is currently listening in {channel.mention}.")
+            else:
+                await ctx.send("⚠️ The saved listening channel no longer exists. Please set a new one.")
+        else:
+            await ctx.send("❌ No listening channel has been set.")
+
+
     async def send_long_message(self, ctx, message, prefix: str = ""):
         """Splits and sends a long message to avoid Discord's 2000-character limit."""
         chunk_size = 1900  # Leave some space for formatting
@@ -498,8 +553,6 @@ class ReginaldCog(commands.Cog):
         for i in range(0, len(message), chunk_size):
             chunk = message[i:i + chunk_size]
             await ctx.send(f"{prefix}{chunk}")
-
-
         
     async def send_split_message(self, ctx, content: str, prefix: str = ""):
         """
