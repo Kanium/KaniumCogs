@@ -90,13 +90,15 @@ class ReginaldCog(commands.Cog):
                     return
                 explicit_invocation = True
             
-        # ✅ Passive Listening: Check if the message contains relevant keywords
-            elif self.should_reginald_interject(message_content):
-                prompt = message_content
-                explicit_invocation = False
+            decision = await self.should_reginald_interject(api_key, message_content, memory, user_profile)
 
-            else:
-                return  # Ignore irrelevant messages
+            if decision == "respond":
+                explicit_invocation = False  # Passive response case
+                prompt = message_content
+            elif decision in ["diplomatic_silence", "contextual_silence"]:
+                return  # Ignore
+            elif decision == "redirect":
+                prompt = "Perhaps we should discuss something more suited to my expertise."  # Subtly redirect
 
         # ✅ Context Handling: Maintain conversation flow
             if memory and memory[-1]["user"] == user_name:
@@ -237,13 +239,15 @@ class ReginaldCog(commands.Cog):
                 temperature=0.4  # Less randomness for consistency
             )
 
-            decision = response.choices[0].message.content.strip().lower()
+            if response.choices and response.choices[0].message:
+                decision = response.choices[0].message.content.strip().lower()
+            else:
+                print(f"🛠️ OpenAI Response Failed: {response}")  # Debugging
+                return "respond"  # Default to responding if unsure
+
             valid_responses = {"respond", "diplomatic_silence", "contextual_silence", "redirect"}
 
-            if decision not in valid_responses:
-                return "contextual_silence"  # Default fail-safe
-
-            return decision
+            return decision if decision in valid_responses else "respond"  
             
         except OpenAIError as e:
             print(f"🛠️ ERROR in Decision Thinking: {e}")
@@ -387,8 +391,8 @@ class ReginaldCog(commands.Cog):
                 frequency_penalty=0.5
             )
             response_text = response.choices[0].message.content.strip()
-            if response_text.startswith("Reginald:"):
-                response_text = response_text[len("Reginald:"):].strip()
+            if response_text.startswith(("Reginald:", "Ah,", "Indeed,", "Well,")):
+                response_text = response_text.split(" ", 1)[1].strip()
             return response_text
 
         except OpenAIError as e:
