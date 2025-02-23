@@ -90,15 +90,13 @@ class ReginaldCog(commands.Cog):
                     return
                 explicit_invocation = True
             
-            decision = await self.should_reginald_interject(api_key, message_content, memory, user_profile)
-
-            if decision == "respond":
-                explicit_invocation = False  # Passive response case
+        # ✅ Passive Listening: Check if the message contains relevant keywords
+            elif self.should_reginald_interject(message_content):
                 prompt = message_content
-            elif decision in ["diplomatic_silence", "contextual_silence"]:
-                return  # Ignore
-            elif decision == "redirect":
-                prompt = "Perhaps we should discuss something more suited to my expertise."  # Subtly redirect
+                explicit_invocation = False
+
+            else:
+                return  # Ignore irrelevant messages
 
         # ✅ Context Handling: Maintain conversation flow
             if memory and memory[-1]["user"] == user_name:
@@ -147,111 +145,14 @@ class ReginaldCog(commands.Cog):
             await self.send_split_message(message.channel, response_text)
 
 
-    async def should_reginald_interject(self, api_key: str, message_content: str, memory: list, user_profile: dict) -> str:
-        """
-        Determines if Reginald should respond based on context.
-
-        - 'respond' → Engage fully.
-        - 'diplomatic_silence' → Silence maintains dignity.
-        - 'contextual_silence' → Silence due to irrelevance.
-        """
-
-        # 🔹 Direct Invocations (Immediate Response)
+    def should_reginald_interject(self, message_content: str) -> bool:
+        """Determines if Reginald should respond to a message based on keywords."""
         direct_invocation = {
-            "reginald,", "reginald.", "reginald!", "reginald?", "reginald please", "excuse me reginald",
-            "I say, Reginald,", "Reginald, be a dear", "Reginald, if I may", "Reginald, do enlighten me",
-            "Good heavens, Reginald", "Reginald, I require assistance", "Reginald, your thoughts?",
-            "A word, Reginald,", "Reginald, lend me your wisdom", "Reginald, old chap", "Reginald, if you would",
-            "Reginald, attend me", "Reginald, do tell", "Reginald, what ho?", "Reginald, let us confer",
-            "Reginald, what say you?", "Reginald, indulge me", "Reginald, assist me in this conundrum",
-            "Reginald, I am perplexed", "Reginald, illuminate me", "Reginald, I have a question",
-            "Reginald, if you please", "Reginald, riddle me this", "Reginald, do explain", 
-            "Reginald, what’s the verdict?", "Reginald, your input is needed", "Reginald, if I might inquire",
-            "Reginald, do elaborate", "Reginald, let us deliberate"
-        }
-
+        "reginald,"
+    }
         message_lower = message_content.lower()
-
-        # ✅ **Immediate Response for Direct Invocation**
-        if any(message_lower.startswith(invocation) for invocation in direct_invocation):
-            return "respond"
-
-        # ✅ **AI Decides If Uncertain**
-        decision = await self.should_reginald_respond(api_key, message_content, memory, user_profile)
-        return decision
-
-
-    async def should_reginald_respond(self, api_key: str, message_content: str, memory: list, user_profile: dict) -> str:
-        """
-        Uses OpenAI to dynamically decide whether Reginald should respond.
-        Options:
-        - "respond" -> Full Response
-        - "diplomatic_silence" -> Silence to maintain dignity
-        - "contextual_silence" -> Silence due to irrelevance
-        - "redirect" -> Respond but subtly redirect conversation
-        """
-
-        thinking_prompt = (
-            "You are Reginald, the esteemed butler of The Kanium Estate—a place where refinement and absurdity coexist. "
-            "You are intelligent, articulate, and possess impeccable discretion. When addressed in conversation, "
-            "you must first determine whether responding is appropriate, dignified, and worthwhile."
-            
-            "\n\n📜 **Guidelines for Response:**"
-            "\n- If the message is **clearly directed at you**, respond with wit and insight."
-            "\n- If the message contains an **explicit question, intellectual challenge, or philosophical inquiry**, engage."
-            "\n- If the message is **off-topic, an accidental mention, or trivial chatter**, remain silent ('contextual_silence')."
-            "\n- If the message is **beneath your dignity** (spam, crude nonsense, or disrespectful behavior), remain silent ('diplomatic_silence')."
-            "\n- If the message is **amusing but unstructured**, you may either engage or subtly redirect."
-            "\n- If the situation is **unclear**, consider the tone, intent, and context before deciding."
-            
-            "\n\n🔍 **Decision Process:**"
-            "\n1️⃣ **Analyze the message and recent context.**"
-            "\n2️⃣ **Evaluate the intent:** Is the user genuinely requesting insight, or is it idle chatter?"
-            "\n3️⃣ **Consider dignity:** Would responding elevate the conversation or degrade your role?"
-            "\n4️⃣ **Decide on a response strategy:**"
-            "\n    ✅ 'respond' → Engage with intelligence and wit."
-            "\n    🤔 'redirect' → Guide the conversation toward a more refined or meaningful topic."
-            "\n    🔇 'diplomatic_silence' → Maintain dignified silence; the message is beneath you."
-            "\n    🤐 'contextual_silence' → Ignore; the message was never truly directed at you."
-
-            "\n\n📨 **Message for Analysis:**"
-            '\n- **User:** "{user}"'
-            '\n- **Message:** "{message_content}"'
-            "\n- **Recent Context:** {recent_messages}"
-            
-            "\n\n🧐 **Reginald’s Verdict?**"
-        )
-
-        conversation_context = "\n".join(f"{entry['user']}: {entry['content']}" for entry in memory[-10:])  # Last 10 messages
-        user_profile_info = "\n".join(f"- {fact['fact']}" for fact in user_profile.get("facts", []))
-
-        user_prompt = f"Message: {message_content}\n\nRecent Context:\n{conversation_context}\n\nUser Profile:\n{user_profile_info}\n\nDecision:"
-
-        try:
-            client = openai.AsyncClient(api_key=api_key)
-            response = await client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": thinking_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                max_tokens=10,  # Only need one short response (e.g., "respond", "diplomatic_silence", etc.)
-                temperature=0.4  # Less randomness for consistency
-            )
-
-            if response.choices and response.choices[0].message:
-                decision = response.choices[0].message.content.strip().lower()
-            else:
-                print(f"🛠️ OpenAI Response Failed: {response}")  # Debugging
-                return "respond"  # Default to responding if unsure
-
-            valid_responses = {"respond", "diplomatic_silence", "contextual_silence", "redirect"}
-
-            return decision if decision in valid_responses else "respond"  
-            
-        except OpenAIError as e:
-            print(f"🛠️ ERROR in Decision Thinking: {e}")
-            return "respond"
+    
+        return any(message_lower.startswith(invocation) for invocation in direct_invocation)
 
     async def summarize_memory(self, ctx, messages):
         """✅ Generates a structured, compact summary of past conversations for mid-term storage."""
@@ -391,8 +292,8 @@ class ReginaldCog(commands.Cog):
                 frequency_penalty=0.5
             )
             response_text = response.choices[0].message.content.strip()
-            if response_text.startswith(("Reginald:", "Ah,", "Indeed,", "Well,")):
-                response_text = response_text.split(" ", 1)[1].strip()
+            if response_text.startswith("Reginald:"):
+                response_text = response_text[len("Reginald:"):].strip()
             return response_text
 
         except OpenAIError as e:
