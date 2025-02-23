@@ -14,7 +14,9 @@ class ReginaldCog(commands.Cog):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=71717171171717)
         self.memory_locks = {}  # ✅ Prevents race conditions per channel
-        self.short_term_memory_limit = 30  # Default value, can be changed dynamically
+        self.short_term_memory_limit = 100  # ✅ Now retains 100 messages
+        self.summary_retention_limit = 25  # ✅ Now retains 25 summaries
+        self.summary_retention_ratio = 0.8  # ✅ 80% summarization, 20% retention
 
         # ✅ Properly Registered Configuration Keys
         default_global = {"openai_model": "gpt-4o-mini"}
@@ -110,36 +112,27 @@ class ReginaldCog(commands.Cog):
                 memory.append({"user": user_name, "content": prompt})
                 memory.append({"user": "Reginald", "content": response_text})
 
-                # ✅ Ensure a minimum of 10 short-term messages are always retained
+                # ✅ Compute dynamic values for summarization and retention
+                messages_to_summarize = int(self.short_term_memory_limit * self.summary_retention_rati
+                o)
+                messages_to_retain = self.short_term_memory_limit - messages_to_summarize
                 MINIMUM_SHORT_TERM_MESSAGES = 10
-
+                messages_to_retain = max(messages_to_retain, MINIMUM_SHORT_TERM_MESSAGES)
+                
                 # ✅ Check if pruning is needed
                 if len(memory) > self.short_term_memory_limit:
-
-                    # 🔹 Generate a summary of the short-term memory
-                    summary = await self.summarize_memory(ctx, memory)
-
-                    # 🔹 Ensure mid-term memory exists for the channel
-                    mid_memory.setdefault(channel_id, [])
-
-                    # 🔹 Store the new summary with timestamp and extracted topics
-                    mid_memory[channel_id].append({
+                    summary = await self.summarize_memory(ctx, memory[:messages_to_summarize])
+                    mid_memory.setdefault(channel_id, []).append({
                         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
                         "topics": self.extract_topics_from_summary(summary),
                         "summary": summary
                     })
 
-                    # 🔹 Maintain only the last 10 summaries
-                    if len(mid_memory[channel_id]) > 10:
-                        mid_memory[channel_id].pop(0)
+                    if len(mid_memory[channel_id]) > self.summary_retention_limit:
+                        mid_memory[channel_id].pop(0)  # ✅ Maintain only the last 25 summaries
 
-                    # ✅ Ensure at least 10 short-term messages remain after pruning
-                    retention_ratio = 0.25  # Default: Keep 25% of messages for continuity
-                    keep_count = max(MINIMUM_SHORT_TERM_MESSAGES, int(len(memory) * retention_ratio))
+                    memory = memory[-messages_to_retain:]  # ✅ Retain last 20% of messages
 
-                    memory = memory[-keep_count:]  # Remove oldest messages but keep at least 10
-
-                # ✅ Store updated short-term memory back
                 short_memory[channel_id] = memory
 
         await self.send_split_message(ctx, response_text)
