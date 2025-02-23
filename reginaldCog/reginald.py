@@ -149,16 +149,34 @@ class ReginaldCog(commands.Cog):
         """Determines if Reginald should respond to a message based on keywords."""
         
         direct_invocation = {
-            "reginald,", "reginald.", "reginald!", "reginald?", "reginald please",
-            "excuse me reginald", "I say reginald,", "reginald my good boy", "good heavens reginald"
-        }
+        "reginald,", "reginald.", "reginald!", "reginald?", "reginald please", "excuse me reginald",
+        "I say, Reginald,", "Reginald, be a dear", "Reginald, if I may", "Reginald, do enlighten me",
+        "Good heavens, Reginald", "Reginald, I require assistance", "Reginald, your thoughts?",
+        "A word, Reginald,", "Reginald, lend me your wisdom", "Reginald, old chap", "Reginald, if you would",
+        "Reginald, attend me", "Reginald, do tell", "Reginald, what ho?", "Reginald, let us confer",
+        "Reginald, what say you?", "Reginald, indulge me", "Reginald, assist me in this conundrum",
+        "Reginald, I am perplexed", "Reginald, illuminate me", "Reginald, I have a question",
+        "Reginald, if you please", "Reginald, riddle me this", "Reginald, do explain", 
+        "Reginald, what’s the verdict?", "Reginald, your input is needed", "Reginald, if I might inquire",
+        "Reginald, do elaborate", "Reginald, let us deliberate"
+    }
 
 
         trigger_keywords = {
-            "reginald", "butler", "jeeves", 
-            "advice", "explain", "elaborate", 
-            "philosophy", "etiquette", "history", "wisdom", "what do you think", "what does it mean", "please explain"
-        }
+        "reginald", "butler", "jeeves", "gentleman", "man of culture", 
+        "advice", "explain", "elaborate", "clarify", "educate me", "enlighten me", 
+        "philosophy", "etiquette", "history", "wisdom", "what do you think", 
+        "what does it mean", "please explain", "expand upon this", "break it down for me",
+        "your thoughts", "insight", "perspective", "interpret", "deliberate", "what say you",
+        "how would you put it", "rationale", "meaning", "define", "give me your take",
+        "how do you see it", "pontificate", "contemplate", "discourse", "make sense of this",
+        "examine", "distill", "sum it up", "what’s your view", "where do you stand",
+        "reasoning", "evaluate", "moral dilemma", "hypothetically speaking", "in principle",
+        "in theory", "in practice", "in essence", "by all means", "indeed", "pray tell",
+        "do tell", "tell me more", "if I may inquire", "if I may be so bold", "would you say",
+        "is it not so", "by what measure", "for what reason", "illuminate me", "enlighten me",
+        "why is it so", "make sense of this", "consider this", "reflect on this", "examine this"
+    }
 
         # ✅ Only trigger if **two or more** keywords are found
         message_lower = message_content.lower()
@@ -524,7 +542,7 @@ class ReginaldCog(commands.Cog):
             await ctx.send(f"📚 **Available Summaries:**\n{summary_list[:2000]}")
 
 
-    @commands.command(name="reginald_set_channel", help="Set the channel where Reginald listens for messages.")
+    @commands.command(name="reginald_set_listening_channel", help="Set the channel where Reginald listens for messages.")
     @commands.has_permissions(administrator=True)
     async def set_listening_channel(self, ctx, channel: discord.TextChannel):
         """Sets the channel where Reginald will listen for passive responses."""
@@ -536,7 +554,8 @@ class ReginaldCog(commands.Cog):
         await self.config.guild(ctx.guild).listening_channel.set(channel.id)
         await ctx.send(f"✅ Reginald will now listen only in {channel.mention}.")
 
-    @commands.command(name="reginald_get_channel", help="Check which channel Reginald is currently listening in.")
+    @commands.command(name="reginald_get_listening_channel", help="Check which channel Reginald is currently listening in.")
+    @commands.has_permissions(administrator=True)
     async def get_listening_channel(self, ctx):
         """Displays the current listening channel."""
         channel_id = await self.config.guild(ctx.guild).listening_channel()
