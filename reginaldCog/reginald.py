@@ -51,11 +51,10 @@ class ReginaldCog(commands.Cog):
         )
 
     @commands.Cog.listener()
-    async def on_message(self, message):
+    async def on_message(self, message, ctx):
         if message.author.bot or not message.guild:
             return  # Ignore bots and DMs
 
-        await self.bot.process_commands(message)  # ✅ Ensure commands still work
 
         guild = message.guild
         channel_id = str(message.channel.id)
@@ -66,6 +65,7 @@ class ReginaldCog(commands.Cog):
         # ✅ Fetch the stored listening channel or fall back to default
         allowed_channel_id = await self.config.guild(guild).listening_channel()
         if not allowed_channel_id:
+            ctx.send("<deciding channel is not cool>") 
             allowed_channel_id = self.default_listening_channel
             await self.config.guild(guild).listening_channel.set(allowed_channel_id)
 
@@ -91,13 +91,14 @@ class ReginaldCog(commands.Cog):
                     await message.channel.send(random.choice(["Yes?", "How may I assist?", "You rang?"]))
                     return
                 explicit_invocation = True
-            
+
         # ✅ Passive Listening: Check if the message contains relevant keywords
             elif self.should_reginald_interject(message_content):
                 prompt = message_content
                 explicit_invocation = False
 
             else:
+                ctx.send("<decided not to interject>") 
                 return  # Ignore irrelevant messages
 
         # ✅ Context Handling: Maintain conversation flow
