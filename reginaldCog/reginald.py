@@ -52,10 +52,10 @@ class ReginaldCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message, ctx):
-        ctx.send("<heard message>") 
         if message.author.bot or not message.guild:
             return  # Ignore bots and DMs
 
+        ctx.send("<heard message>") 
 
         guild = message.guild
         channel_id = str(message.channel.id)
