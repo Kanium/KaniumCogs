@@ -148,14 +148,24 @@ class ReginaldCog(commands.Cog):
     def should_reginald_interject(self, message_content: str) -> bool:
         """Determines if Reginald should respond to a message based on keywords."""
         
+        direct_invocation = {
+            "reginald,", "reginald.", "reginald!", "reginald?", "reginald please",
+            "excuse me reginald", "I say reginald,", "reginald my good boy", "good heavens reginald"
+        }
+
+
         trigger_keywords = {
             "reginald", "butler", "jeeves", 
             "advice", "explain", "elaborate", 
-            "philosophy", "etiquette", "history", "wisdom"
+            "philosophy", "etiquette", "history", "wisdom", "what do you think", "what does it mean", "please explain"
         }
 
         # ✅ Only trigger if **two or more** keywords are found
         message_lower = message_content.lower()
+        
+        if any(message_lower.startswith(invocation) for invocation in direct_invocation):
+            return True
+        
         found_keywords = [word for word in trigger_keywords if word in message_lower]
 
         return len(found_keywords) >= 2
