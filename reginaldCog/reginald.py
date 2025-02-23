@@ -113,12 +113,9 @@ class ReginaldCog(commands.Cog):
                 memory.append({"user": "Reginald", "content": response_text})
 
                 # ✅ Compute dynamic values for summarization and retention
-                messages_to_summarize = int(self.short_term_memory_limit * self.summary_retention_rati
-                o)
+                messages_to_summarize = int(self.short_term_memory_limit * self.summary_retention_ratio)
                 messages_to_retain = self.short_term_memory_limit - messages_to_summarize
-                MINIMUM_SHORT_TERM_MESSAGES = 10
-                messages_to_retain = max(messages_to_retain, MINIMUM_SHORT_TERM_MESSAGES)
-                
+
                 # ✅ Check if pruning is needed
                 if len(memory) > self.short_term_memory_limit:
                     summary = await self.summarize_memory(ctx, memory[:messages_to_summarize])
