@@ -51,11 +51,9 @@ class ReginaldCog(commands.Cog):
         )
 
     @commands.Cog.listener()
-    async def on_message(self, message, ctx):
+    async def on_message(self, message):
         if message.author.bot or not message.guild:
             return  # Ignore bots and DMs
-
-        ctx.send("<heard message>") 
 
         guild = message.guild
         channel_id = str(message.channel.id)
@@ -66,7 +64,6 @@ class ReginaldCog(commands.Cog):
         # ✅ Fetch the stored listening channel or fall back to default
         allowed_channel_id = await self.config.guild(guild).listening_channel()
         if not allowed_channel_id:
-            ctx.send("<deciding channel is not cool>") 
             allowed_channel_id = self.default_listening_channel
             await self.config.guild(guild).listening_channel.set(allowed_channel_id)
 
@@ -92,14 +89,13 @@ class ReginaldCog(commands.Cog):
                     await message.channel.send(random.choice(["Yes?", "How may I assist?", "You rang?"]))
                     return
                 explicit_invocation = True
-
+            
         # ✅ Passive Listening: Check if the message contains relevant keywords
             elif self.should_reginald_interject(message_content):
                 prompt = message_content
                 explicit_invocation = False
 
             else:
-                ctx.send("<decided not to interject>") 
                 return  # Ignore irrelevant messages
 
         # ✅ Context Handling: Maintain conversation flow
@@ -123,30 +119,30 @@ class ReginaldCog(commands.Cog):
                         "content": f"[{summary['timestamp']}] Topics: {', '.join(summary['topics'])}\n{summary['summary']}"
                     })
 
-                formatted_messages += [{"role": "user", "content": f"{entry['user']}: {entry['content']}"} for entry in memory]
-                formatted_messages.append({"role": "user", "content": f"{user_name}: {prompt}"})
+            formatted_messages += [{"role": "user", "content": f"{entry['user']}: {entry['content']}"} for entry in memory]
+            formatted_messages.append({"role": "user", "content": f"{user_name}: {prompt}"})
 
                 # ✅ Generate AI Response
-                response_text = await self.generate_response(api_key, formatted_messages)
+            response_text = await self.generate_response(api_key, formatted_messages)
 
                  # ✅ Store Memory
-                memory.append({"user": user_name, "content": prompt})
-                memory.append({"user": "Reginald", "content": response_text})
+            memory.append({"user": user_name, "content": prompt})
+            memory.append({"user": "Reginald", "content": response_text})
 
-                if len(memory) > self.short_term_memory_limit:
-                    summary = await self.summarize_memory(message, memory[:int(self.short_term_memory_limit * self.summary_retention_ratio)])
-                    mid_memory.setdefault(channel_id, []).append({
-                        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-                        "topics": self.extract_topics_from_summary(summary),
-                        "summary": summary
-                    })
-                    if len(mid_memory[channel_id]) > self.summary_retention_limit:
-                        mid_memory[channel_id].pop(0)
-                    memory = memory[-(self.short_term_memory_limit - int(self.short_term_memory_limit * self.summary_retention_ratio)):]
+            if len(memory) > self.short_term_memory_limit:
+                summary = await self.summarize_memory(message, memory[:int(self.short_term_memory_limit * self.summary_retention_ratio)])
+                mid_memory.setdefault(channel_id, []).append({
+                    "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+                    "topics": self.extract_topics_from_summary(summary),
+                    "summary": summary
+                })
+                if len(mid_memory[channel_id]) > self.summary_retention_limit:
+                    mid_memory[channel_id].pop(0)
+                memory = memory[-(self.short_term_memory_limit - int(self.short_term_memory_limit * self.summary_retention_ratio)):]
 
-                short_memory[channel_id] = memory
+            short_memory[channel_id] = memory
 
-                await self.send_split_message(message.channel, response_text)
+            await self.send_split_message(message.channel, response_text)
 
 
     def should_reginald_interject(self, message_content: str) -> bool:
