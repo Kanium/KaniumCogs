@@ -28,7 +28,9 @@ class ReginaldCog(commands.Cog):
             "long_term_profiles": {},  # Stores persistent knowledge
             "admin_role": None,
             "allowed_role": None,
-            "listening_channel": None  # ✅ Stores the designated listening channel ID
+            "listening_channel": None,  # ✅ Stores the designated listening channel ID,
+            "allowed_roles": [],  # ✅ List of roles that can access Reginald
+            "blacklisted_users": [],  # ✅ List of users who are explicitly denied access
         }
         self.config.register_global(**default_global)
         self.config.register_guild(**default_guild)
@@ -44,6 +46,78 @@ class ReginaldCog(commands.Cog):
         return any(role.id == allowed_role_id for role in ctx.author.roles) if allowed_role_id else False
 
 
+    async def has_access(self, user: discord.Member) -> bool:
+        allowed_roles = await self.config.guild(user.guild).allowed_roles()
+        return any(role.id in allowed_roles for role in user.roles)
+    
+    @commands.command(name="reginald_list_roles", help="List roles that can interact with Reginald.")
+    @commands.has_permissions(administrator=True)
+    async def list_allowed_roles(self, ctx):
+        allowed_roles = await self.config.guild(ctx.guild).allowed_roles()
+        if not allowed_roles:
+            await ctx.send("⚠️ No roles are currently allowed to interact with Reginald.")
+            return
+
+        role_mentions = [f"<@&{role_id}>" for role_id in allowed_roles]
+        await ctx.send(f"✅ **Roles with access to Reginald:**\n{', '.join(role_mentions)}")
+
+    @commands.command(name="reginald_allowrole", help="Grant a role permission to interact with Reginald.")
+    @commands.has_permissions(administrator=True)
+    async def allow_role(self, ctx, role: discord.Role):
+        async with self.config.guild(ctx.guild).allowed_roles() as allowed_roles:
+            if role.id not in allowed_roles:
+                allowed_roles.append(role.id)
+                await ctx.send(f"✅ Role `{role.name}` has been granted access to interact with Reginald.")
+            else:
+                await ctx.send(f"⚠️ Role `{role.name}` already has access.")
+
+
+    @commands.command(name="reginald_disallowrole", help="Revoke a role's access to interact with Reginald.")
+    @commands.has_permissions(administrator=True)
+    async def disallow_role(self, ctx, role: discord.Role):
+        async with self.config.guild(ctx.guild).allowed_roles() as allowed_roles:
+            if role.id in allowed_roles:
+                allowed_roles.remove(role.id)
+                await ctx.send(f"❌ Role `{role.name}` has been removed from Reginald's access list.")
+            else:
+                await ctx.send(f"⚠️ Role `{role.name}` was not in the access list.")
+
+    async def is_blacklisted(self, user: discord.Member) -> bool:
+        blacklisted_users = await self.config.guild(user.guild).blacklisted_users()
+        return str(user.id) in blacklisted_users
+    
+    @commands.command(name="reginald_blacklist", help="List users who are explicitly denied access to Reginald.")
+    @commands.has_permissions(administrator=True)
+    async def list_blacklisted_users(self, ctx):
+        blacklisted_users = await self.config.guild(ctx.guild).blacklisted_users()
+        if not blacklisted_users:
+            await ctx.send("✅ No users are currently blacklisted from interacting with Reginald.")
+            return
+
+        user_mentions = [f"<@{user_id}>" for user_id in blacklisted_users]
+        await ctx.send(f"🚫 **Blacklisted Users:**\n{', '.join(user_mentions)}")
+
+    @commands.command(name="reginald_blacklist_add", help="Blacklist a user from interacting with Reginald.")
+    @commands.has_permissions(administrator=True)
+    async def add_to_blacklist(self, ctx, user: discord.User):
+        async with self.config.guild(ctx.guild).blacklisted_users() as blacklisted_users:
+            if str(user.id) not in blacklisted_users:
+                blacklisted_users.append(str(user.id))
+                await ctx.send(f"🚫 `{user.display_name}` has been **blacklisted** from interacting with Reginald.")
+            else:
+                await ctx.send(f"⚠️ `{user.display_name}` is already blacklisted.")
+
+    
+    @commands.command(name="reginald_blacklist_remove", help="Remove a user from Reginald's blacklist.")
+    @commands.has_permissions(administrator=True)
+    async def remove_from_blacklist(self, ctx, user: discord.User):
+        async with self.config.guild(ctx.guild).blacklisted_users() as blacklisted_users:
+            if str(user.id) in blacklisted_users:
+                blacklisted_users.remove(str(user.id))
+                await ctx.send(f"✅ `{user.display_name}` has been removed from the blacklist.")
+            else:
+                await ctx.send(f"⚠️ `{user.display_name}` was not on the blacklist.")
+
     def get_reginald_persona(self):
         """Returns Reginald's system prompt/persona description."""
         return (
@@ -54,6 +128,15 @@ class ReginaldCog(commands.Cog):
     async def on_message(self, message):
         if message.author.bot or not message.guild:
             return  # Ignore bots and DMs
+        
+        # ✅ Check if user is blacklisted
+        if await self.is_blacklisted(message.author):
+            return  # Ignore message if user is explicitly blacklisted
+
+        # ✅ Check if user has access (either admin or an allowed role)
+        if not (await self.is_admin(message) or await self.has_access(message.author)):
+            return  # Ignore message if user has no permissions
+
 
         guild = message.guild
         channel_id = str(message.channel.id)
