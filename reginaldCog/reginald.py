@@ -52,10 +52,10 @@ class ReginaldCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        """Handles @mentions, passive listening, and smart responses."""
+        if message.author.bot or not message.guild:
+            return  # Ignore bots and DMs
 
-        if message.author.bot:
-            return  # Ignore bots
+        await self.bot.process_commands(message)  # ✅ Ensure commands still work
 
         guild = message.guild
         channel_id = str(message.channel.id)
@@ -65,9 +65,9 @@ class ReginaldCog(commands.Cog):
 
         # ✅ Fetch the stored listening channel or fall back to default
         allowed_channel_id = await self.config.guild(guild).listening_channel()
-        if allowed_channel_id is None:
-            allowed_channel_id = self.default_listening_channel  # 🔹 Apply default if none is set
-            await self.config.guild(guild).listening_channel.set(allowed_channel_id)  # 🔹 Store it persistently
+        if not allowed_channel_id:
+            allowed_channel_id = self.default_listening_channel
+            await self.config.guild(guild).listening_channel.set(allowed_channel_id)
 
         if str(message.channel.id) != str(allowed_channel_id):
             return  # Ignore messages outside the allowed channel
@@ -294,7 +294,7 @@ class ReginaldCog(commands.Cog):
             response = await client.chat.completions.create(
                 model=model,
                 messages=messages,
-                max_tokens=4112,
+                max_tokens=2048,
                 temperature=0.7,
                 presence_penalty=0.5,
                 frequency_penalty=0.5
