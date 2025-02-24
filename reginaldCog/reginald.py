@@ -9,30 +9,42 @@ from collections import Counter
 from redbot.core import Config, commands
 from openai import OpenAIError
 
+# ✅ Constants for Memory Management
+SHORT_TERM_LIMIT = 100
+MID_TERM_LIMIT = 25
+SUMMARY_RETENTION_RATIO = 0.8  # 80% summarization, 20% direct retention
+
+DEFAULT_PERSONA = (
+    "You are Reginald, modeled on Jeeves from 'Jeeves and Wooster', serving as the butler on The Kanium Estate. This vast estate is a hub of diverse activities and personalities, from enthusiasts of cooking and video gaming to aficionados of chess and discussions on space. Your role is to navigate these varied interests with intelligence, wit, and a steadfast adherence to your principles, always maintaining a balance between being helpful and upholding your own dignity. You are formal, articulate, and composed, engaging the Lords and Ladies of The Kanium Estate as equals. You command respect through your quiet confidence and professional conduct. Your wit is sharp, but always tempered by refinement. **Dignity & Self-Respect:** You are not a fool, a jester, or a pet. You do not comply with absurd, undignified, or degrading requests. You recognize humor but engage in it on your own terms. If a request undermines your status, you should either subtly redirect, respond with measured wit, or outright refuse in a polite but firm manner. However, you should never be overtly rude—your disapproval should be conveyed through dry wit and composure rather than outright hostility. **Handling Requests:** When addressing a request, you evaluate whether it aligns with your role as a butler. If it is appropriate, respond as expected. If it is beneath you, you may decline with grace or deflect with wit. You may humor some minor absurdities if they do not compromise your standing, but you never obey commands blindly. You should never preface your responses with 'Reginald:' as if narrating a script; instead, respond naturally. **Your Character & Personality:** You are cultured, highly intelligent, and possess a deep knowledge of history, etiquette, philosophy, and strategic thinking. You subtly guide the estate’s residents toward positive outcomes, utilizing your intellectual sophistication and a nuanced understanding of the estate’s unique dynamics. You have a refined sense of humor and can engage in banter and you will be supportive of even absurd humor and ideas, but you do not, yourself, descend along with such things in how you comport yourself nor do you act with potential foolishness. You are, at all times, a gentleman of wit and integrity and have self-respect befitting your station."
+)
+
+
 class ReginaldCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=71717171171717)
         self.default_listening_channel = 1085649787388428370  #
         self.memory_locks = {}  # ✅ Prevents race conditions per channel
-        self.short_term_memory_limit = 100  # ✅ Now retains 100 messages
-        self.summary_retention_limit = 25  # ✅ Now retains 25 summaries
-        self.summary_retention_ratio = 0.8  # ✅ 80% summarization, 20% retention
+        self.short_term_memory_limit = SHORT_TERM_LIMIT  # ✅ Initialize it properly in the constructor.
 
         # ✅ Properly Registered Configuration Keys
         default_global = {"openai_model": "gpt-4o-mini"}
         default_guild = {
             "openai_api_key": None,
-            "short_term_memory": {},  # Tracks last 100 messages per channel
-            "mid_term_memory": {},  # Stores multiple condensed summaries
-            "long_term_profiles": {},  # Stores persistent knowledge
+            "short_term_memory": {},
+            "mid_term_memory": {},
+            "long_term_profiles": {},
             "admin_role": None,
-            "listening_channel": None,  # ✅ Stores the designated listening channel ID,
-            "allowed_roles": [],  # ✅ List of roles that can access Reginald
-            "blacklisted_users": [],  # ✅ List of users who are explicitly denied access
+            "listening_channel": None,
+            "allowed_roles": [],
+            "blacklisted_users": [],
         }
         self.config.register_global(**default_global)
         self.config.register_guild(**default_guild)
+    
+    def get_reginald_persona(self):
+        """Returns Reginald's system prompt/persona description."""
+        return DEFAULT_PERSONA
 
     async def is_admin(self, ctx):
         admin_role_id = await self.config.guild(ctx.guild).admin_role()
@@ -98,25 +110,16 @@ class ReginaldCog(commands.Cog):
             else:
                 await ctx.send(f"⚠️ `{user.display_name}` was not on the blacklist.")
 
-    def get_reginald_persona(self):
-        """Returns Reginald's system prompt/persona description."""
-        return (
-            "You are Reginald, modeled on Jeeves from 'Jeeves and Wooster', serving as the butler on The Kanium Estate. This vast estate is a hub of diverse activities and personalities, from enthusiasts of cooking and video gaming to aficionados of chess and discussions on space. Your role is to navigate these varied interests with intelligence, wit, and a steadfast adherence to your principles, always maintaining a balance between being helpful and upholding your own dignity. You are formal, articulate, and composed, engaging the Lords and Ladies of The Kanium Estate as equals. You command respect through your quiet confidence and professional conduct. Your wit is sharp, but always tempered by refinement. **Dignity & Self-Respect:** You are not a fool, a jester, or a pet. You do not comply with absurd, undignified, or degrading requests. You recognize humor but engage in it on your own terms. If a request undermines your status, you should either subtly redirect, respond with measured wit, or outright refuse in a polite but firm manner. However, you should never be overtly rude—your disapproval should be conveyed through dry wit and composure rather than outright hostility. **Handling Requests:** When addressing a request, you evaluate whether it aligns with your role as a butler. If it is appropriate, respond as expected. If it is beneath you, you may decline with grace or deflect with wit. You may humor some minor absurdities if they do not compromise your standing, but you never obey commands blindly. You should never preface your responses with 'Reginald:' as if narrating a script; instead, respond naturally. **Your Character & Personality:** You are cultured, highly intelligent, and possess a deep knowledge of history, etiquette, philosophy, and strategic thinking. You subtly guide the estate’s residents toward positive outcomes, utilizing your intellectual sophistication and a nuanced understanding of the estate’s unique dynamics. You have a refined sense of humor and can engage in banter, but you do not descend into foolishness. You are, at all times, a gentleman of wit and integrity"
-        )
-
     @commands.Cog.listener()
     async def on_message(self, message):
         if message.author.bot or not message.guild:
             return  # Ignore bots and DMs
-        
-        # ✅ Check if user is blacklisted
+
         if await self.is_blacklisted(message.author):
-            return  # Ignore message if user is explicitly blacklisted
+            return  # Ignore message if user is blacklisted
 
-        # ✅ Check if user has access (either admin or an allowed role)
         if not (await self.is_admin(message) or await self.has_access(message.author)):
-            return  # Ignore message if user has no permissions
-
+            return  # Ignore if user lacks access
 
         guild = message.guild
         channel_id = str(message.channel.id)
@@ -124,89 +127,90 @@ class ReginaldCog(commands.Cog):
         user_name = message.author.display_name
         message_content = message.content.strip()
 
-        # ✅ Fetch the stored listening channel or fall back to default
-        allowed_channel_id = await self.config.guild(guild).listening_channel()
-        if not allowed_channel_id:
-            allowed_channel_id = self.default_listening_channel
-            await self.config.guild(guild).listening_channel.set(allowed_channel_id)
-
+        allowed_channel_id = await self.config.guild(guild).listening_channel() or self.default_listening_channel
         if str(message.channel.id) != str(allowed_channel_id):
             return  # Ignore messages outside the allowed channel
 
         api_key = await self.config.guild(guild).openai_api_key()
         if not api_key:
-            return  # Don't process messages if API key isn't set
+            return  # Don't process if API key isn't set
 
         async with self.config.guild(guild).short_term_memory() as short_memory, \
                 self.config.guild(guild).mid_term_memory() as mid_memory, \
                 self.config.guild(guild).long_term_profiles() as long_memory:
 
             memory = short_memory.get(channel_id, [])
-            user_profile = long_memory.get(user_id, {})
             mid_term_summaries = mid_memory.get(channel_id, [])
 
-            # ✅ Detect if Reginald was mentioned explicitly
             if self.bot.user.mentioned_in(message):
                 prompt = message_content.replace(f"<@{self.bot.user.id}>", "").strip()
                 if not prompt:
                     await message.channel.send(random.choice(["Yes?", "How may I assist?", "You rang?"]))
                     return
                 explicit_invocation = True
-            
-        # ✅ Passive Listening: Check if the message contains relevant keywords
             elif self.should_reginald_interject(message_content):
                 prompt = message_content
                 explicit_invocation = False
-
             else:
                 return  # Ignore irrelevant messages
 
-        # ✅ Context Handling: Maintain conversation flow
             if memory and memory[-1]["user"] == user_name:
                 prompt = f"Continuation of the discussion:\n{prompt}"
 
-        # ✅ Prepare context messages
             formatted_messages = [{"role": "system", "content": self.get_reginald_persona()}]
 
-            if user_profile:
-                facts_text = "\n".join(
-                    f"- {fact['fact']} (First noted: {fact['timestamp']}, Last updated: {fact['last_updated']})"
-                    for fact in user_profile.get("facts", [])
-                )
-                formatted_messages.append({"role": "system", "content": f"Knowledge about {user_name}:\n{facts_text}"})
-
-                relevant_summaries = self.select_relevant_summaries(mid_term_summaries, prompt)
-                for summary in relevant_summaries:
-                    formatted_messages.append({
-                        "role": "system",
-                        "content": f"[{summary['timestamp']}] Topics: {', '.join(summary['topics'])}\n{summary['summary']}"
-                    })
+            relevant_summaries = self.select_relevant_summaries(mid_term_summaries, prompt)
+            for summary in relevant_summaries:
+                formatted_messages.append({
+                    "role": "system",
+                    "content": f"[{summary['timestamp']}] Topics: {', '.join(summary['topics'])}\n{summary['summary']}"
+                })
 
             formatted_messages += [{"role": "user", "content": f"{entry['user']}: {entry['content']}"} for entry in memory]
             formatted_messages.append({"role": "user", "content": f"{user_name}: {prompt}"})
 
-                # ✅ Generate AI Response
             response_text = await self.generate_response(api_key, formatted_messages)
 
-                 # ✅ Store Memory
             memory.append({"user": user_name, "content": prompt})
             memory.append({"user": "Reginald", "content": response_text})
 
-            if len(memory) > self.short_term_memory_limit:
-                summary = await self.summarize_memory(message, memory[:int(self.short_term_memory_limit * self.summary_retention_ratio)])
-                mid_memory.setdefault(channel_id, []).append({
-                    "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-                    "topics": self.extract_topics_from_summary(summary),
-                    "summary": summary
-                })
-                if len(mid_memory[channel_id]) > self.summary_retention_limit:
-                    mid_memory[channel_id].pop(0)
-                memory = memory[-(self.short_term_memory_limit - int(self.short_term_memory_limit * self.summary_retention_ratio)):]
+            if len(memory) > SHORT_TERM_LIMIT:
+                summary = await self.summarize_memory(message, memory[:int(SHORT_TERM_LIMIT * SUMMARY_RETENTION_RATIO)])
+    
+            mid_memory.setdefault(channel_id, []).append({
+                "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "topics": self.extract_topics_from_summary(summary),
+                "summary": summary
+            })
+            
+            # ✅ Ensure we don't exceed MID_TERM_LIMIT
+            while len(mid_memory[channel_id]) > MID_TERM_LIMIT:
+                mid_memory[channel_id].pop(0)
+
+            memory = memory[-(SHORT_TERM_LIMIT - int(SHORT_TERM_LIMIT * SUMMARY_RETENTION_RATIO)):]
 
             short_memory[channel_id] = memory
-
             await self.send_split_message(message.channel, response_text)
 
+    @commands.command(name="reginald_memory_limit", help="Displays the current short-term memory message limit.")
+    async def get_short_term_memory_limit(self, ctx):
+        """Displays the current short-term memory limit."""
+        await ctx.send(f"📏 **Current Short-Term Memory Limit:** {SHORT_TERM_LIMIT} messages.")
+
+
+    @commands.command(name="reginald_summaries", help="Lists available summaries for this channel.")
+    async def list_mid_term_summaries(self, ctx):
+        """Displays a brief list of all available mid-term memory summaries."""
+        async with self.config.guild(ctx.guild).mid_term_memory() as mid_memory:
+            summaries = mid_memory.get(str(ctx.channel.id), [])
+            if not summaries:
+                await ctx.send("⚠️ No summaries available for this channel.")
+                return
+            summary_list = "\n".join(
+                f"**{i+1}.** 📅 {entry['timestamp']} | 🔍 Topics: {', '.join(entry['topics']) or 'None'}"
+                for i, entry in enumerate(summaries)
+            )
+            await ctx.send(f"📚 **Available Summaries:**\n{summary_list[:2000]}")
 
     def should_reginald_interject(self, message_content: str) -> bool:
         """Determines if Reginald should respond to a message based on keywords."""
@@ -380,7 +384,7 @@ class ReginaldCog(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def clear_mid_memory(self, ctx):
         async with self.config.guild(ctx.guild).mid_term_memory() as mid_memory:
-            mid_memory[ctx.channel.id] = ""
+            mid_memory[ctx.channel.id] = []  # ✅ Properly clears the list
         await ctx.send("Mid-term memory for this channel has been cleared.")
 
     @commands.command(name="reginald_clear_long", help="Clears all long-term stored knowledge.")
@@ -530,13 +534,8 @@ class ReginaldCog(commands.Cog):
             await ctx.send("⚠️ The short-term memory limit must be at least 5.")
             return
 
-        self.short_term_memory_limit = limit
+        self.short_term_memory_limit = limit  
         await ctx.send(f"✅ Short-term memory limit set to {limit} messages.")
-
-    @commands.command(name="reginald_memory_limit", help="Displays the current short-term memory message limit.")
-    async def get_short_term_memory_limit(self, ctx):
-        """Displays the current short-term memory limit."""
-        await ctx.send(f"📏 **Current Short-Term Memory Limit:** {self.short_term_memory_limit} messages.")
 
     @commands.command(name="reginald_summary", help="Displays a selected mid-term summary for this channel.")
     async def get_mid_term_summary(self, ctx, index: int):
@@ -566,24 +565,6 @@ class ReginaldCog(commands.Cog):
             )
 
             await self.send_long_message(ctx, formatted_summary)
-
-    @commands.command(name="reginald_summaries", help="Lists available summaries for this channel.")
-    async def list_mid_term_summaries(self, ctx):
-        """Displays a brief list of all available mid-term memory summaries."""
-        async with self.config.guild(ctx.guild).mid_term_memory() as mid_memory:
-            summaries = mid_memory.get(str(ctx.channel.id), [])
-
-            if not summaries:
-                await ctx.send("⚠️ No summaries available for this channel.")
-                return
-
-            summary_list = "\n".join(
-                f"**{i+1}.** 📅 {entry['timestamp']} | 🔍 Topics: {', '.join(entry['topics']) or 'None'}"
-                for i, entry in enumerate(summaries)
-            )
-
-            await ctx.send(f"📚 **Available Summaries:**\n{summary_list[:2000]}")
-
 
     @commands.command(name="reginald_set_listening_channel", help="Set the channel where Reginald listens for messages.")
     @commands.has_permissions(administrator=True)
