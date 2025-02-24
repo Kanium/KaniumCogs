@@ -71,8 +71,7 @@ class ReginaldCog(commands.Cog):
             if role.id not in allowed_roles:
                 allowed_roles.append(role.id)
                 await self.config.guild(ctx.guild).allowed_roles.set(allowed_roles)  # Save change
-                print(f"DEBUG: Role {role.id} added. Current allowed_roles: {allowed_roles}")  # ✅ Print Debug Info
-                await ctx.send(f"✅ Role `{role.name}` has been granted access to interact with Reginald.")
+                await ctx.send(f"DEBUG: Role {role.id} added. Current allowed_roles: {allowed_roles}")
             else:
                 await ctx.send(f"⚠️ Role `{role.name}` already has access.")
 
