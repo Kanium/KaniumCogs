@@ -50,12 +50,10 @@ class ReginaldCog(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def list_allowed_roles(self, ctx):
         allowed_roles = await self.config.guild(ctx.guild).allowed_roles() or []
-        
-        # Remove roles that no longer exist in the server
+        print(f"DEBUG: allowed_roles from config: {allowed_roles}")  # ✅ Debugging output
+
         valid_roles = [role_id for role_id in allowed_roles if ctx.guild.get_role(role_id)]
-        
-        # Save the updated valid roles list (removes invalid ones)
-        await self.config.guild(ctx.guild).allowed_roles.set(valid_roles)
+        await self.config.guild(ctx.guild).allowed_roles.set(valid_roles)  # Save cleaned list
 
         if not valid_roles:
             await ctx.send("⚠️ No roles are currently allowed to interact with Reginald.")
@@ -69,9 +67,11 @@ class ReginaldCog(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def allow_role(self, ctx, role: discord.Role):
         async with self.config.guild(ctx.guild).allowed_roles() as allowed_roles:
-            allowed_roles = list(set(allowed_roles + [role.id]))  # Ensure uniqueness
-            await self.config.guild(ctx.guild).allowed_roles.set(allowed_roles)  # Save the cleaned list
-            await ctx.send(f"✅ Role `{role.name}` has been granted access to interact with Reginald.")
+            if role.id not in allowed_roles:
+                allowed_roles.append(role.id)  # Append new role
+            await self.config.guild(ctx.guild).allowed_roles.set(allowed_roles)  # Ensure it's saved
+        await ctx.send(f"✅ Role `{role.name}` has been granted access to interact with Reginald.")
+
 
     @commands.command(name="reginald_disallowrole", help="Revoke a role's access to interact with Reginald.")
     @commands.has_permissions(administrator=True)
