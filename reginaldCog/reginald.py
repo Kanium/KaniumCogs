@@ -282,18 +282,20 @@ class ReginaldCog(commands.Cog):
         
     def extract_topics_from_summary(self, summary):
         """Dynamically extracts the most important topics from a summary."""
+        
+        if isinstance(summary, dict):  # ✅ Extract summary content correctly
+            summary = summary.get("summary", "")
 
-        # 🔹 Extract all words from summary
+        if not isinstance(summary, str):  # ✅ Additional safeguard
+            return []
+
         keywords = re.findall(r"\b\w+\b", summary.lower())
 
-        # 🔹 Count word occurrences
         word_counts = Counter(keywords)
 
-        # 🔹 Remove unimportant words (common filler words)
-        stop_words = {"the", "and", "of", "in", "to", "is", "on", "for", "with", "at", "by", "it", "this", "that", "his", "her"}
+        stop_words = {"the", "and", "of", "in", "to", "is", "on", "for", "with", "at", "by", "it", "this", "that"}
         filtered_words = {word: count for word, count in word_counts.items() if word not in stop_words and len(word) > 2}
 
-        # 🔹 Take the 5 most frequently used words as "topics"
         topics = sorted(filtered_words, key=filtered_words.get, reverse=True)[:5]
 
         return topics
