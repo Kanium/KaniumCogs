@@ -47,19 +47,24 @@ class ReginaldCog(commands.Cog):
 
 
     async def has_access(self, user: discord.Member) -> bool:
-        allowed_roles = await self.config.guild(user.guild).allowed_roles()
+        allowed_roles = [int(role_id) for role_id in await self.config.guild(ctx.guild).allowed_roles()]
         return any(role.id in allowed_roles for role in user.roles)
     
     @commands.command(name="reginald_list_roles", help="List roles that can interact with Reginald.")
     @commands.has_permissions(administrator=True)
     async def list_allowed_roles(self, ctx):
         allowed_roles = await self.config.guild(ctx.guild).allowed_roles()
-        if not allowed_roles:
+
+        # Ensure roles exist
+        valid_roles = [role_id for role_id in allowed_roles if ctx.guild.get_role(role_id)]
+        
+        if not valid_roles:
             await ctx.send("⚠️ No roles are currently allowed to interact with Reginald.")
             return
 
-        role_mentions = [f"<@&{role_id}>" for role_id in allowed_roles]
+        role_mentions = [f"<@&{role_id}>" for role_id in valid_roles]
         await ctx.send(f"✅ **Roles with access to Reginald:**\n{', '.join(role_mentions)}")
+
 
     @commands.command(name="reginald_allowrole", help="Grant a role permission to interact with Reginald.")
     @commands.has_permissions(administrator=True)
@@ -70,7 +75,6 @@ class ReginaldCog(commands.Cog):
                 await ctx.send(f"✅ Role `{role.name}` has been granted access to interact with Reginald.")
             else:
                 await ctx.send(f"⚠️ Role `{role.name}` already has access.")
-
 
     @commands.command(name="reginald_disallowrole", help="Revoke a role's access to interact with Reginald.")
     @commands.has_permissions(administrator=True)
