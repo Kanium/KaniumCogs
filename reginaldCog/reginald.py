@@ -27,7 +27,6 @@ class ReginaldCog(commands.Cog):
             "mid_term_memory": {},  # Stores multiple condensed summaries
             "long_term_profiles": {},  # Stores persistent knowledge
             "admin_role": None,
-            "allowed_role": None,
             "listening_channel": None,  # ✅ Stores the designated listening channel ID,
             "allowed_roles": [],  # ✅ List of roles that can access Reginald
             "blacklisted_users": [],  # ✅ List of users who are explicitly denied access
@@ -50,9 +49,10 @@ class ReginaldCog(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def list_allowed_roles(self, ctx):
         allowed_roles = await self.config.guild(ctx.guild).allowed_roles() or []
-        print(f"DEBUG: allowed_roles from config: {allowed_roles}")  # ✅ Debugging output
+        print(f"DEBUG: Retrieved allowed_roles: {allowed_roles}")  # ✅ Print Debug Info
 
         valid_roles = [role_id for role_id in allowed_roles if ctx.guild.get_role(role_id)]
+        
         await self.config.guild(ctx.guild).allowed_roles.set(valid_roles)  # Save cleaned list
 
         if not valid_roles:
@@ -63,14 +63,18 @@ class ReginaldCog(commands.Cog):
         await ctx.send(f"✅ **Roles with access to Reginald:**\n{', '.join(role_mentions)}")
 
 
+
     @commands.command(name="reginald_allowrole", help="Grant a role permission to interact with Reginald.")
     @commands.has_permissions(administrator=True)
     async def allow_role(self, ctx, role: discord.Role):
         async with self.config.guild(ctx.guild).allowed_roles() as allowed_roles:
             if role.id not in allowed_roles:
-                allowed_roles.append(role.id)  # Append new role
-            await self.config.guild(ctx.guild).allowed_roles.set(allowed_roles)  # Ensure it's saved
-        await ctx.send(f"✅ Role `{role.name}` has been granted access to interact with Reginald.")
+                allowed_roles.append(role.id)
+                await self.config.guild(ctx.guild).allowed_roles.set(allowed_roles)  # Save change
+                print(f"DEBUG: Role {role.id} added. Current allowed_roles: {allowed_roles}")  # ✅ Print Debug Info
+                await ctx.send(f"✅ Role `{role.name}` has been granted access to interact with Reginald.")
+            else:
+                await ctx.send(f"⚠️ Role `{role.name}` already has access.")
 
 
     @commands.command(name="reginald_disallowrole", help="Revoke a role's access to interact with Reginald.")
