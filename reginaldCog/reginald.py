@@ -263,7 +263,12 @@ class ReginaldCog(commands.Cog):
                     "a void of information. I shall endeavor to be more verbose next time."
                 )
 
-            return summary_content
+            # ✅ Ensure only this new summary is stored, no nesting!
+            return {
+                "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "topics": self.extract_topics_from_summary(summary_content),
+                "summary": summary_content
+            }
 
         except OpenAIError as e:
             error_message = f"OpenAI Error: {e}"
