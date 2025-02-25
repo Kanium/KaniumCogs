@@ -61,7 +61,6 @@ class ReginaldCog(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def list_allowed_roles(self, ctx):
         allowed_roles = await self.config.guild(ctx.guild).allowed_roles() or []
-        print(f"DEBUG: Retrieved allowed_roles: {allowed_roles}")  # ✅ Print Debug Info
 
         valid_roles = [role_id for role_id in allowed_roles if ctx.guild.get_role(role_id)]
         
