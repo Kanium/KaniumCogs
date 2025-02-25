@@ -175,14 +175,14 @@ class ReginaldCog(commands.Cog):
 
             summary = None # ✅ Always define it first
 
-            if len(memory) > SHORT_TERM_LIMIT:
+            summary = None  # ✅ Ensure summary always exists
+
+            if len(memory) == SHORT_TERM_LIMIT:  # ✅ Trigger only when exactly 100 messages
+                print(f"🛠️ DEBUG: Summarizing {SHORT_TERM_LIMIT * SUMMARY_RETENTION_RATIO} messages.")
                 summary = await self.summarize_memory(message, memory[:int(SHORT_TERM_LIMIT * SUMMARY_RETENTION_RATIO)])
-    
-            mid_memory.setdefault(channel_id, []).append({
-                "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-                "topics": self.extract_topics_from_summary(summary),
-                "summary": summary
-            })
+
+                # ✅ Remove only summarized messages, keep the last 20 messages
+                memory = memory[int(SHORT_TERM_LIMIT * SUMMARY_RETENTION_RATIO):]
             
             # ✅ Ensure we don't exceed MID_TERM_LIMIT
             while len(mid_memory[channel_id]) > MID_TERM_LIMIT:
