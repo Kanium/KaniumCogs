@@ -173,13 +173,21 @@ class ReginaldCog(commands.Cog):
             memory.append({"user": user_name, "content": prompt})
             memory.append({"user": "Reginald", "content": response_text})
 
-            summary = None # ✅ Always define it first
-
-            summary = None  # ✅ Ensure summary always exists
+            summary = None  # Initialize
 
             if len(memory) == SHORT_TERM_LIMIT:  # ✅ Trigger only when exactly 100 messages
                 print(f"🛠️ DEBUG: Summarizing {SHORT_TERM_LIMIT * SUMMARY_RETENTION_RATIO} messages.")
                 summary = await self.summarize_memory(message, memory[:int(SHORT_TERM_LIMIT * SUMMARY_RETENTION_RATIO)])
+                
+                if summary and summary["summary"].strip():  # ✅ Ensure summary contains valid content
+                    mid_memory.setdefault(channel_id, []).append(summary)
+
+                mid_memory.setdefault(channel_id, [])  # ✅ Ensures key exists
+
+                if summary:  # ✅ Ensure we have a valid summary before appending
+                    mid_memory.setdefault(channel_id, []).append(summary)
+                    while len(mid_memory[channel_id]) > MID_TERM_LIMIT:
+                        mid_memory[channel_id].pop(0)
 
                 # ✅ Remove only summarized messages, keep the last 20 messages
                 memory = memory[int(SHORT_TERM_LIMIT * SUMMARY_RETENTION_RATIO):]
