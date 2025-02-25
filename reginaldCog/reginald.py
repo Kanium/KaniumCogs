@@ -173,6 +173,8 @@ class ReginaldCog(commands.Cog):
             memory.append({"user": user_name, "content": prompt})
             memory.append({"user": "Reginald", "content": response_text})
 
+            summary = None # ✅ Always define it first
+
             if len(memory) > SHORT_TERM_LIMIT:
                 summary = await self.summarize_memory(message, memory[:int(SHORT_TERM_LIMIT * SUMMARY_RETENTION_RATIO)])
     
