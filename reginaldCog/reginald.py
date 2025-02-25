@@ -558,16 +558,13 @@ class ReginaldCog(commands.Cog):
             # Fetch the selected summary
             selected_summary = summaries[index - 1]  # Convert to 0-based index
             
-            # Format output
+            # Format output correctly
             formatted_summary = (
                 f"📜 **Summary {index} of {len(summaries)}**\n"
                 f"📅 **Date:** {selected_summary['timestamp']}\n"
                 f"🔍 **Topics:** {', '.join(selected_summary['topics']) or 'None'}\n"
-                f"📝 **Summary:**\n
-
-{selected_summary['summary']}
-
-"
+                f"📝 **Summary:**\n\n"
+                f"{selected_summary['summary']}"
             )
 
             await self.send_long_message(ctx, formatted_summary)
