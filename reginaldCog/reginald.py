@@ -265,30 +265,15 @@ class ReginaldCog(commands.Cog):
             error_message = f"OpenAI Error: {e}"
             print(f"🛠️ DEBUG: {error_message}")  # Log error to console
     
-            reginald_responses = [
-                f"Regrettably, I must inform you that I have encountered a bureaucratic obstruction whilst attempting to summarize:\n\n
+        reginald_responses = [
+            f"Regrettably, I must inform you that I have encountered a bureaucratic obstruction whilst attempting to summarize:\n\n{error_message}",
+            f"It would seem that a most unfortunate technical hiccup has befallen my faculties in the matter of summarization:\n\n{error_message}",
+            f"Ah, it appears I have received an urgent memorandum stating that my summarization efforts have been thwarted:\n\n{error_message}",
+            f"I regret to inform you that my usual eloquence is presently obstructed by an unforeseen complication while summarizing:\n\n{error_message}"
+        ]
 
-{error_message}
+        return random.choice(reginald_responses)
 
-",
-                f"It would seem that a most unfortunate technical hiccup has befallen my faculties in the matter of summarization:\n\n
-
-{error_message}
-
-",
-                f"Ah, it appears I have received an urgent memorandum stating that my summarization efforts have been thwarted:\n\n
-
-{error_message}
-
-",
-                f"I regret to inform you that my usual eloquence is presently obstructed by an unforeseen complication while summarizing:\n\n
-
-{error_message}
-
-"
-            ]
-
-            return random.choice(reginald_responses)
 
 
         
