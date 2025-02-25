@@ -264,13 +264,13 @@ class ReginaldCog(commands.Cog):
         except OpenAIError as e:
             error_message = f"OpenAI Error: {e}"
             print(f"🛠️ DEBUG: {error_message}")  # Log error to console
-    
-        reginald_responses = [
-            f"Regrettably, I must inform you that I have encountered a bureaucratic obstruction whilst attempting to summarize:\n\n{error_message}",
-            f"It would seem that a most unfortunate technical hiccup has befallen my faculties in the matter of summarization:\n\n{error_message}",
-            f"Ah, it appears I have received an urgent memorandum stating that my summarization efforts have been thwarted:\n\n{error_message}",
-            f"I regret to inform you that my usual eloquence is presently obstructed by an unforeseen complication while summarizing:\n\n{error_message}"
-        ]
+
+            reginald_responses = [
+                f"Regrettably, I must inform you that I have encountered a bureaucratic obstruction whilst attempting to summarize:\n\n{error_message}",
+                f"It would seem that a most unfortunate technical hiccup has befallen my faculties in the matter of summarization:\n\n{error_message}",
+                f"Ah, it appears I have received an urgent memorandum stating that my summarization efforts have been thwarted:\n\n{error_message}",
+                f"I regret to inform you that my usual eloquence is presently obstructed by an unforeseen complication while summarizing:\n\n{error_message}"
+            ]
 
         return random.choice(reginald_responses)
 
@@ -363,26 +363,10 @@ class ReginaldCog(commands.Cog):
         except OpenAIError as e:
             error_message = f"OpenAI Error: {e}"
             reginald_responses = [
-                f"Regrettably, I must inform you that I have encountered a bureaucratic obstruction:\n\n
-
-{error_message}
-
-",
-                f"It would seem that a most unfortunate technical hiccup has befallen my faculties:\n\n
-
-{error_message}
-
-",
-                f"Ah, it appears I have received an urgent memorandum stating:\n\n
-
-{error_message}
-
-",
-                f"I regret to inform you that my usual eloquence is presently obstructed by an unforeseen complication:\n\n
-
-{error_message}
-
-"
+                f"Regrettably, I must inform you that I have encountered a bureaucratic obstruction:\n\n{error_message}",
+                f"It would seem that a most unfortunate technical hiccup has befallen my faculties:\n\n{error_message}",
+                f"Ah, it appears I have received an urgent memorandum stating:\n\n{error_message}",
+                f"I regret to inform you that my usual eloquence is presently obstructed by an unforeseen complication:\n\n{error_message}"
             ]
             return random.choice(reginald_responses)
 
