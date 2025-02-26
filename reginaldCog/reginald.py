@@ -628,44 +628,38 @@ class ReginaldCog(commands.Cog):
         
     async def send_split_message(self, ctx, content: str, prefix: str = ""):
         """
-        A unified function to handle sending long messages on Discord, ensuring they don't exceed the 2,000-character limit.
-
-        Parameters:
-        - ctx: Discord command context (for sending messages)
-        - content: The message content to send
-        - prefix: Optional prefix for each message part (e.g., "📜 Summary:")
+        Sends a long message to Discord while ensuring it does not exceed the 2000-character limit.
+        This function prevents awkward mid-word or unnecessary extra message breaks.
         """
-        # Discord message character limit (allowing a safety buffer)
-        CHUNK_SIZE = 1900  # Slightly below 2000 to account for formatting/prefix
-
+        CHUNK_SIZE = 1900  # Keep buffer for formatting/safety
+        
         if prefix:
-            CHUNK_SIZE -= len(prefix)  # Adjust chunk size if a prefix is used
+            CHUNK_SIZE -= len(prefix)  # Account for prefix length
 
         # If the message is short enough, send it directly
         if len(content) <= CHUNK_SIZE:
             await ctx.send(f"{prefix}{content}")
             return
 
+        # **Improved Chunking Logic**
+        while content:
+            # Try to split at a newline first (prefer sentence breaks)
+            split_index = content.rfind("\n", 0, CHUNK_SIZE)
 
-        #chunks = []
-        while len(content) > 0:
-            # Find the nearest valid break point within CHUNK_SIZE
-            split_index = content[:CHUNK_SIZE].rfind("\n")
-
-            # If no newline, fall back to the nearest space
+            # If no newline, split at the last space (avoid word-breaking)
             if split_index == -1:
-                split_index = content[:CHUNK_SIZE].rfind(" ")
+                split_index = content.rfind(" ", 0, CHUNK_SIZE)
 
-            # If still no valid break point, hard split at CHUNK_SIZE
+            # If still no break point found, force chunk size limit
             if split_index == -1:
                 split_index = CHUNK_SIZE
 
-            # Extract the chunk and send it
+            # Extract the message chunk and send it
             chunk = content[:split_index].strip()
             content = content[split_index:].strip()
 
-            await ctx.send(f"{prefix}{chunk}")  # Send the chunk
+            await ctx.send(f"{prefix}{chunk}")
 
-async def setup(bot):
-    """✅ Correct async cog setup for Redbot"""
-    await bot.add_cog(ReginaldCog(bot))
+    async def setup(bot):
+        """✅ Correct async cog setup for Redbot"""
+        await bot.add_cog(ReginaldCog(bot))
