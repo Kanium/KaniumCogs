@@ -632,33 +632,48 @@ class ReginaldCog(commands.Cog):
         This function prevents awkward mid-word or unnecessary extra message breaks.
         """
         CHUNK_SIZE = 1900  # Keep buffer for formatting/safety
-        
-        if prefix:
-            CHUNK_SIZE -= len(prefix)  # Account for prefix length
 
-        # If the message is short enough, send it directly
-        if len(content) <= CHUNK_SIZE:
-            await ctx.send(f"{prefix}{content}")
-            return
+        split_message = self.split_message(content, CHUNK_SIZE, prefix)
+        for chunk in split_message:
+            await ctx.send(f"{prefix}{chunk}")
 
-        # **Improved Chunking Logic**
-        while content:
+    def split_message(
+            self,
+            message: str,
+            chunk_size: int,
+            prefix: str = ""
+    ) -> list[str]:
+        """Results in a list of message chunks, use *for* loop to send."""
+        chunk_size -= len(prefix)
+        split_result = []
+
+        if 0 < len(message) <= chunk_size:
+            # If the message is short enough, add it directly
+            split_result.append(message)
+        elif len(message) > chunk_size:
             # Try to split at a newline first (prefer sentence breaks)
-            split_index = content.rfind("\n", 0, CHUNK_SIZE)
+            split_index = message.rfind("\n", 0, chunk_size)
 
-            # If no newline, split at the last space (avoid word-breaking)
+            # If no newline, split at the end of sentence (avoid sentence breaks)
             if split_index == -1:
-                split_index = content.rfind(" ", 0, CHUNK_SIZE)
+                split_index = message.rfind(". ", 0, chunk_size)
+
+            # If no newline, split at the last word (avoid word-breaking)
+            if split_index == -1:
+                split_index = message.rfind(" ", 0, chunk_size)
 
             # If still no break point found, force chunk size limit
             if split_index == -1:
-                split_index = CHUNK_SIZE
+                split_index = chunk_size
 
-            # Extract the message chunk and send it
-            chunk = content[:split_index].strip()
-            content = content[split_index:].strip()
+            message_split_part = message[:split_index].strip()
+            message_remained_part = message[split_index:].strip()
+            # Put the split part in the begining of the result list
+            split_result.append(message_split_part)
+            # And go for a recursive adventure with the remained message part
+            split_result += self.split_message(message=message_remained_part, chunk_size=chunk_size)
 
-            await ctx.send(f"{prefix}{chunk}")
+        return split_result
 
     async def setup(bot):
         """✅ Correct async cog setup for Redbot"""
