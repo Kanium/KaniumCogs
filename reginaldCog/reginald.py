@@ -646,21 +646,35 @@ class ReginaldCog(commands.Cog):
             await ctx.send(f"{prefix}{content}")
             return
 
-        # Splitting the message into chunks
+
         chunks = []
         while len(content) > 0:
-            # Find a good breaking point (preferably at a sentence or word break)
-            split_index = content.rfind("\n", 0, CHUNK_SIZE)
+            # First, try to split at the nearest sentence-ending punctuation
+            split_index = max(
+                content.rfind(". ", 0, CHUNK_SIZE),
+                content.rfind("? ", 0, CHUNK_SIZE),
+                content.rfind("! ", 0, CHUNK_SIZE),
+            )
+
+            # If no sentence-ending punctuation found, fall back to newline
+            if split_index == -1:
+                split_index = content.rfind("\n", 0, CHUNK_SIZE)
+
+            # If no newline found, fall back to word space
             if split_index == -1:
                 split_index = content.rfind(" ", 0, CHUNK_SIZE)
+
+            # If no good breaking point found, split at the max chunk size
             if split_index == -1:
-                split_index = CHUNK_SIZE  # Fallback to max chunk size
+                split_index = CHUNK_SIZE
 
-            # Extract chunk and trim remaining content
-            chunks.append(content[:split_index].strip())
-            content = content[split_index:].strip()
+            # Extract chunk, ensuring we don't cut words or sentences
+            chunk = content[:split_index + 1].strip()
+            content = content[split_index + 1:].strip()  # Trim the remaining content
 
-        # Send chunks sequentially
+            chunks.append(chunk)
+
+        # Send each chunk
         for chunk in chunks:
             await ctx.send(f"{prefix}{chunk}")
 
