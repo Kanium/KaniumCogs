@@ -647,36 +647,24 @@ class ReginaldCog(commands.Cog):
             return
 
 
-        chunks = []
+        #chunks = []
         while len(content) > 0:
-            # First, try to split at the nearest sentence-ending punctuation
-            split_index = max(
-                content.rfind(". ", 0, CHUNK_SIZE),
-                content.rfind("? ", 0, CHUNK_SIZE),
-                content.rfind("! ", 0, CHUNK_SIZE),
-            )
+            # Find the nearest valid break point within CHUNK_SIZE
+            split_index = content[:CHUNK_SIZE].rfind("\n")
 
-            # If no sentence-ending punctuation found, fall back to newline
+            # If no newline, fall back to the nearest space
             if split_index == -1:
-                split_index = content.rfind("\n", 0, CHUNK_SIZE)
+                split_index = content[:CHUNK_SIZE].rfind(" ")
 
-            # If no newline found, fall back to word space
-            if split_index == -1:
-                split_index = content.rfind(" ", 0, CHUNK_SIZE)
-
-            # If no good breaking point found, split at the max chunk size
+            # If still no valid break point, hard split at CHUNK_SIZE
             if split_index == -1:
                 split_index = CHUNK_SIZE
 
-            # Extract chunk, ensuring we don't cut words or sentences
-            chunk = content[:split_index + 1].strip()
-            content = content[split_index + 1:].strip()  # Trim the remaining content
+            # Extract the chunk and send it
+            chunk = content[:split_index].strip()
+            content = content[split_index:].strip()
 
-            chunks.append(chunk)
-
-        # Send each chunk
-        for chunk in chunks:
-            await ctx.send(f"{prefix}{chunk}")
+            await ctx.send(f"{prefix}{chunk}")  # Send the chunk
 
 async def setup(bot):
     """✅ Correct async cog setup for Redbot"""
