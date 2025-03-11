@@ -8,6 +8,7 @@ import traceback
 from collections import Counter
 from redbot.core import Config, commands
 from openai import OpenAIError
+from permissions import list_allowed_roles_logic
 
 class ReginaldCog(commands.Cog):
     def __init__(self, bot):
@@ -48,19 +49,7 @@ class ReginaldCog(commands.Cog):
     @commands.command(name="reginald_list_roles", help="List roles that can interact with Reginald.")
     @commands.has_permissions(administrator=True)
     async def list_allowed_roles(self, ctx):
-        allowed_roles = await self.config.guild(ctx.guild).allowed_roles() or []
-        print(f"DEBUG: Retrieved allowed_roles: {allowed_roles}")  # ✅ Print Debug Info
-
-        valid_roles = [role_id for role_id in allowed_roles if ctx.guild.get_role(role_id)]
-        
-        await self.config.guild(ctx.guild).allowed_roles.set(valid_roles)  # Save cleaned list
-
-        if not valid_roles:
-            await ctx.send("⚠️ No roles are currently allowed to interact with Reginald.")
-            return
-
-        role_mentions = [f"<@&{role_id}>" for role_id in valid_roles]
-        await ctx.send(f"✅ **Roles with access to Reginald:**\n{', '.join(role_mentions)}")
+        await list_allowed_roles_logic(ctx)
 
     async def is_blacklisted(self, user: discord.Member) -> bool:
         blacklisted_users = await self.config.guild(user.guild).blacklisted_users()
@@ -273,9 +262,6 @@ class ReginaldCog(commands.Cog):
             ]
 
         return random.choice(reginald_responses)
-
-
-
         
     def extract_topics_from_summary(self, summary):
         """Dynamically extracts the most important topics from a summary."""
