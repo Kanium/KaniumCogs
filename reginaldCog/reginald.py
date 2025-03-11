@@ -8,7 +8,7 @@ import traceback
 from collections import Counter
 from redbot.core import Config, commands
 from openai import OpenAIError
-from permissions import list_allowed_roles_logic
+from .permissions import list_allowed_roles_logic
 
 class ReginaldCog(commands.Cog):
     def __init__(self, bot):
