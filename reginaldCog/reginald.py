@@ -8,7 +8,7 @@ import traceback
 from collections import Counter
 from redbot.core import Config, commands
 from openai import OpenAIError
-from .permissions import list_allowed_roles_logic
+from .permissions import PermissionsMixin
 
 class ReginaldCog(commands.Cog):
     def __init__(self, bot):
@@ -44,12 +44,6 @@ class ReginaldCog(commands.Cog):
     async def has_access(self, user: discord.Member) -> bool:
         allowed_roles = await self.config.guild(user.guild).allowed_roles() or []  # Ensure it's always a list
         return any(role.id in allowed_roles for role in user.roles)
-
-    
-    @commands.command(name="reginald_list_roles", help="List roles that can interact with Reginald.")
-    @commands.has_permissions(administrator=True)
-    async def list_allowed_roles(self, ctx):
-        await list_allowed_roles_logic(ctx)
 
     async def is_blacklisted(self, user: discord.Member) -> bool:
         blacklisted_users = await self.config.guild(user.guild).blacklisted_users()
@@ -472,34 +466,6 @@ class ReginaldCog(commands.Cog):
                 await ctx.send(f"Reginald has forgotten all stored information about {user.display_name}.")
             else:
                 await ctx.send(f"No stored knowledge about {user.display_name} to delete.")
-
-    @commands.command(name="reginald_allowrole", help="Grant a role permission to interact with Reginald.")
-    @commands.has_permissions(administrator=True)
-    async def allow_role(self, ctx, role: discord.Role):
-        async with self.config.guild(ctx.guild).allowed_roles() as allowed_roles:
-            # ✅ Clean list of invalid roles before adding new one
-            valid_roles = [role_id for role_id in allowed_roles if ctx.guild.get_role(role_id)]
-            
-            if role.id not in valid_roles:
-                valid_roles.append(role.id)
-                await self.config.guild(ctx.guild).allowed_roles.set(valid_roles)  # Save change
-                await ctx.send(f"✅ Role {role.name} has been granted access to Reginald.")
-            else:
-                await ctx.send(f"⚠️ Role {role.name} already has access.")
-
-    @commands.command(name="reginald_disallowrole", help="Revoke a role's access to interact with Reginald.")
-    @commands.has_permissions(administrator=True)
-    async def disallow_role(self, ctx, role: discord.Role):
-        async with self.config.guild(ctx.guild).allowed_roles() as allowed_roles:
-            valid_roles = [role_id for role_id in allowed_roles if ctx.guild.get_role(role_id)]
-            await self.config.guild(ctx.guild).allowed_roles.set(valid_roles)
-
-            if role.id in valid_roles:
-                valid_roles.remove(role.id)
-                await self.config.guild(ctx.guild).allowed_roles.set(valid_roles)
-                await ctx.send(f"❌ Role {role.name} has been removed from Reginald's access list.")
-            else:
-                await ctx.send(f"⚠️ Role {role.name} was not in the access list.")
         
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
