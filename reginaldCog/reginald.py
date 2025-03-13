@@ -10,7 +10,7 @@ from redbot.core import Config, commands
 from openai import OpenAIError
 from .permissions import PermissionsMixin
 
-class ReginaldCog(commands.Cog):
+class ReginaldCog(commands.Cog, PermissionsMixin):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=71717171171717)
