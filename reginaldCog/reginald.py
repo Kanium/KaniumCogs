@@ -15,14 +15,9 @@ from .memory import MemoryMixin
 class ReginaldCog(commands.Cog, PermissionsMixin, BlacklistMixin, MemoryMixin):
     def __init__(self, bot):
         self.bot = bot
-        config_instance = Config.get_conf(self, identifier=71717171171717)  # ✅ Create config instance
+        self._config = Config.get_conf(self, identifier=71717171171717)  # ✅ Store `_config` first
 
-        # ✅ Pass config explicitly to MemoryMixin
-        MemoryMixin.__init__(self, config_instance)  
-
-        super().__init__()  # ✅ Now it's safe to initialize parent classes
-
-        self.config = config_instance  # ✅ Store config after parent init
+        super().__init__()  # Trying to get MemoryMixin to have access to _config
 
         self.default_listening_channel = 1085649787388428370
         self.memory_locks = {}
