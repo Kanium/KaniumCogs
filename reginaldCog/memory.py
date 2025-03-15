@@ -13,7 +13,7 @@ class MemoryMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)  # ✅ Ensure cooperative MRO initialization
-        self.short_term_memory_limit = 100
+        self.short_term_memory_limit = 50
         self.summary_retention_limit = 25
         self.summary_retention_ratio = 0.8
     
