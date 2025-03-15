@@ -16,6 +16,7 @@ class ReginaldCog(commands.Cog, PermissionsMixin, BlacklistMixin, MemoryMixin):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=71717171171717)
+        MemoryMixin.__init__(self, self.config)  # Pass config to MemoryMixin
 
         # Properly Registered Configuration Keys
         default_global = {"openai_model": "gpt-4o-mini"}
@@ -31,9 +32,6 @@ class ReginaldCog(commands.Cog, PermissionsMixin, BlacklistMixin, MemoryMixin):
         }
         self.config.register_global(**default_global)
         self.config.register_guild(**default_guild)
-
-        # Pass config explicitly to MemoryMixin
-        MemoryMixin.__init__(self, self.config)  
 
     async def is_admin(self, ctx):
         admin_role_id = await self.config.guild(ctx.guild).admin_role()
