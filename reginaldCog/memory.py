@@ -11,12 +11,8 @@ from openai import OpenAIError
 class MemoryMixin:
     """Handles all memory-related functions for Reginald."""
 
-    @property
-    def config(self):
-        """Dynamically fetches the config from the parent cog."""
-        return self._config  # This assumes `ReginaldCog` sets `self._config`
-
-    def __init__(self):
+    def __init__(self, config: Config):
+        self.config = config  # Now explicitly set
         self.short_term_memory_limit = 100
         self.summary_retention_limit = 25
         self.summary_retention_ratio = 0.8

@@ -17,14 +17,7 @@ class ReginaldCog(commands.Cog, PermissionsMixin, BlacklistMixin, MemoryMixin):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=71717171171717)
 
-        self._config = self.config  # ✅ Ensure MemoryMixin sees this before calling super
-
-        super().__init__()  # ✅ Now it's safe to initialize parent classes
-
-        self.default_listening_channel = 1085649787388428370
-        self.memory_locks = {}
-
-        # ✅ Properly Registered Configuration Keys
+        # Properly Registered Configuration Keys
         default_global = {"openai_model": "gpt-4o-mini"}
         default_guild = {
             "openai_api_key": None,
@@ -38,6 +31,9 @@ class ReginaldCog(commands.Cog, PermissionsMixin, BlacklistMixin, MemoryMixin):
         }
         self.config.register_global(**default_global)
         self.config.register_guild(**default_guild)
+
+        # Pass config explicitly to MemoryMixin
+        MemoryMixin.__init__(self, self.config)  
 
     async def is_admin(self, ctx):
         admin_role_id = await self.config.guild(ctx.guild).admin_role()
