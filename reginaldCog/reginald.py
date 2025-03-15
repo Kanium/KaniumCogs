@@ -14,6 +14,7 @@ from .memory import MemoryMixin
 
 class ReginaldCog(commands.Cog, PermissionsMixin, BlacklistMixin, MemoryMixin):
     def __init__(self, bot):
+        super().__init__()
         self.bot = bot
         self.config = Config.get_conf(self, identifier=71717171171717)
         self.default_listening_channel = 1085649787388428370
@@ -33,8 +34,6 @@ class ReginaldCog(commands.Cog, PermissionsMixin, BlacklistMixin, MemoryMixin):
         }
         self.config.register_global(**default_global)
         self.config.register_guild(**default_guild)
-
-        super().__init__(self.config) #Trying to initialize MemoryMixin
 
     async def is_admin(self, ctx):
         admin_role_id = await self.config.guild(ctx.guild).admin_role()
