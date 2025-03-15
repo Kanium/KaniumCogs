@@ -15,8 +15,17 @@ from .memory import MemoryMixin
 class ReginaldCog(commands.Cog, PermissionsMixin, BlacklistMixin, MemoryMixin):
     def __init__(self, bot):
         self.bot = bot
-        self.config = Config.get_conf(self, identifier=71717171171717)
-        MemoryMixin.__init__(self, self.config)  # Pass config to MemoryMixin
+        config_instance = Config.get_conf(self, identifier=71717171171717)  # ✅ Create config instance
+
+        # ✅ Pass config explicitly to MemoryMixin
+        MemoryMixin.__init__(self, config_instance)  
+
+        super().__init__()  # ✅ Now it's safe to initialize parent classes
+
+        self.config = config_instance  # ✅ Store config after parent init
+
+        self.default_listening_channel = 1085649787388428370
+        self.memory_locks = {}
 
         # Properly Registered Configuration Keys
         default_global = {"openai_model": "gpt-4o-mini"}
