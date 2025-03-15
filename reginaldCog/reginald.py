@@ -16,25 +16,25 @@ class ReginaldCog(commands.Cog, PermissionsMixin, BlacklistMixin, MemoryMixin):
     def __init__(self, bot):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=71717171171717)
-        self.default_listening_channel = 1085649787388428370  #
-        self.memory_locks = {}  # ✅ Prevents race conditions per channel
+        self.default_listening_channel = 1085649787388428370
+        self.memory_locks = {}
 
-        # ✅ Properly Registered Configuration Keys
+        # Properly Registered Configuration Keys
         default_global = {"openai_model": "gpt-4o-mini"}
         default_guild = {
             "openai_api_key": None,
-            "short_term_memory": {},  # Tracks last 100 messages per channel
-            "mid_term_memory": {},  # Stores multiple condensed summaries
-            "long_term_profiles": {},  # Stores persistent knowledge
+            "short_term_memory": {},
+            "mid_term_memory": {},
+            "long_term_profiles": {},
             "admin_role": None,
-            "listening_channel": None,  # ✅ Stores the designated listening channel ID,
-            "allowed_roles": [],  # ✅ List of roles that can access Reginald
-            "blacklisted_users": [],  # ✅ List of users who are explicitly denied access
+            "listening_channel": None,
+            "allowed_roles": [],
+            "blacklisted_users": [],
         }
         self.config.register_global(**default_global)
         self.config.register_guild(**default_guild)
-        
-        MemoryMixin.__init__(self, self.config)
+
+        super().__init__(self.config) #Trying to initialize MemoryMixin
 
     async def is_admin(self, ctx):
         admin_role_id = await self.config.guild(ctx.guild).admin_role()
