@@ -14,13 +14,17 @@ from .memory import MemoryMixin
 
 class ReginaldCog(commands.Cog, PermissionsMixin, BlacklistMixin, MemoryMixin):
     def __init__(self, bot):
-        super().__init__()
+        super().__init__()  # ✅ Call parent class constructor first
+        
         self.bot = bot
         self.config = Config.get_conf(self, identifier=71717171171717)
         self.default_listening_channel = 1085649787388428370
         self.memory_locks = {}
 
-        # Properly Registered Configuration Keys
+        # ✅ Ensure `MemoryMixin` can access `config`
+        self._config = self.config  # 🔥 This is the key part that enables `MemoryMixin.config`
+
+        # ✅ Properly Registered Configuration Keys
         default_global = {"openai_model": "gpt-4o-mini"}
         default_guild = {
             "openai_api_key": None,
