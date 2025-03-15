@@ -12,17 +12,17 @@ from .permissions import PermissionsMixin
 from .blacklist import BlacklistMixin
 from .memory import MemoryMixin
 
-class ReginaldCog(commands.Cog, PermissionsMixin, BlacklistMixin, MemoryMixin):
+class ReginaldCog(PermissionsMixin, BlacklistMixin, MemoryMixin, commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self._config = Config.get_conf(self, identifier=71717171171717)  # ✅ Store `_config` first
+        self.config = Config.get_conf(self, identifier=71717171171717)  # ✅ Ensure config exists before super()
 
-        super().__init__()  # Trying to get MemoryMixin to have access to _config
+        super().__init__()  # ✅ Properly initialize all mixins & commands.Cog
 
         self.default_listening_channel = 1085649787388428370
         self.memory_locks = {}
 
-        # Properly Registered Configuration Keys
+        # ✅ Properly Registered Configuration Keys
         default_global = {"openai_model": "gpt-4o-mini"}
         default_guild = {
             "openai_api_key": None,

@@ -11,15 +11,11 @@ from openai import OpenAIError
 class MemoryMixin:
     """Handles all memory-related functions for Reginald."""
 
-    def __init__(self):
-        """No longer requires `config` as a parameter."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)  # ✅ Ensure cooperative MRO initialization
         self.short_term_memory_limit = 100
         self.summary_retention_limit = 25
         self.summary_retention_ratio = 0.8
-
-    def get_config(self):
-        """Access `_config` from the parent class (ReginaldCog)."""
-        return self._config  # ✅ Use `_config` instead of `self.config`
     
     @commands.command(name="reginald_clear_short", help="Clears short-term memory for this channel.")
     @commands.has_permissions(administrator=True)
