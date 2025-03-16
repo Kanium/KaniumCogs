@@ -5,12 +5,25 @@ import asyncio
 import datetime
 import re
 import traceback
+import json
 from collections import Counter
 from redbot.core import Config, commands
 from openai import OpenAIError
 from .permissions import PermissionsMixin
 from .blacklist import BlacklistMixin
 from .memory import MemoryMixin
+from .weather import time_now, get_current_weather, get_weather_forecast
+from .tools_description import TOOLS
+
+
+CALLABLE_FUNCTIONS = {
+    # Dictionary with functions to call.
+    # You can use globals()[func_name](**args) instead, but that's too implicit.
+    'time_now': time_now,
+    'get_current_weather': get_current_weather,
+    'get_weather_forecast': get_weather_forecast,
+}
+
 
 class ReginaldCog(PermissionsMixin, BlacklistMixin, MemoryMixin, commands.Cog):
     def __init__(self, bot):
@@ -180,14 +193,43 @@ class ReginaldCog(PermissionsMixin, BlacklistMixin, MemoryMixin, commands.Cog):
         model = await self.config.openai_model()
         try:
             client = openai.AsyncClient(api_key=api_key)
-            response = await client.chat.completions.create(
-                model=model,
-                messages=messages,
-                max_tokens=2048,
-                temperature=0.7,
-                presence_penalty=0.5,
-                frequency_penalty=0.5
-            )
+            completion_args = {
+                'model': model,
+                'messages': messages,
+                'max_tokens': 2048,
+                'temperature': 0.7,
+                'presence_penalty': 0.5,
+                'frequency_penalty': 0.5,
+                'tools': TOOLS,
+                'tool_choice': 'auto',
+            }
+            response = await client.chat.completions.create(**completion_args)
+            # Checking for function calls
+            tool_calls = response.choices[0].message.tool_calls
+            # Appending response with tool calls
+            messages.append({
+                'role': 'assistant',
+                'content': response.choices[0].message.content,
+                'tool_calls': tool_calls
+            })
+            if tool_calls:
+                for i_call in tool_calls:
+                    # Calling for necessary functions
+                    func_name = i_call.function.name
+                    func_args = json.loads(i_call.function.arguments)
+                    tool_call_id = i_call.id
+                    # Getting function result and putting it into messages
+                    func_result = CALLABLE_FUNCTIONS[func_name](**func_args)
+                    messages.append({
+                        'role': 'tool',
+                        'content': func_result,
+                        'tool_calls': tool_calls,
+                        'tool_call_id': tool_call_id,
+                    })
+                # Second completion required if functions has been called to interpret the result into user-friendly
+                # chat message.
+                response = await client.chat.completions.create(**completion_args)
+
             response_text = response.choices[0].message.content.strip()
             if response_text.startswith("Reginald:"):
                 response_text = response_text[len("Reginald:"):].strip()
