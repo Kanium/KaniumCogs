@@ -212,7 +212,7 @@ class ReginaldCog(PermissionsMixin, BlacklistMixin, MemoryMixin, commands.Cog):
                 'content': response.choices[0].message.content,
                 'tool_calls': tool_calls
             })
-            if tool_calls:
+            if isinstance(tool_calls, list) and tool_calls:
                 for i_call in tool_calls:
                     # Calling for necessary functions
                     func_name = i_call.function.name

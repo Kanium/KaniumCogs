@@ -3,7 +3,7 @@ from os import environ
 import requests
 import json
 
-WEATHER_API_KEY = environ.get('WEATHER_API_KEY')
+#WEATHER_API_KEY = environ.get('WEATHER_API_KEY')
 URL = 'http://api.weatherapi.com/v1'
 
 
@@ -24,6 +24,7 @@ def get_weather_forecast(location: str, days: int = 14, dt: str = '2025-03-24') 
 class Weather:
     def __init__(self, location: str):
         self.__location = location
+        self.api_key = environ.get('WEATHER-API_KEY')
 
     @property
     def location(self) -> str:
@@ -37,7 +38,7 @@ class Weather:
     def realtime(self):
         method = '/current.json'
         params = {
-            'key': WEATHER_API_KEY,
+            'key': self.api_key,
             'q': self.location,
         }
         return self.make_request(method=method, params=params)
@@ -45,7 +46,7 @@ class Weather:
     def forecast(self, days: int = 14, dt: str = '2025-03-24'):
         method = '/forecast.json'
         params = {
-            'key': WEATHER_API_KEY,
+            'key': self.api_key,
             'q': self.location,
             'days': days,
             'dt': dt,
