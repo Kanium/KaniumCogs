@@ -134,10 +134,20 @@ class ReginaldCog(PermissionsMixin, BlacklistMixin, MemoryMixin, commands.Cog):
             formatted_messages += [{"role": "user", "content": f"{entry['user']}: {entry['content']}"} for entry in memory]
             formatted_messages.append({"role": "user", "content": f"{user_name}: {prompt}"})
 
-                # ✅ Generate AI Response
+
+            ##################################################
+            #                                                #
+            ## Generate AI Response, put into response_text ##
+            #                                                #
+            ##################################################
+
             response_text = await self.generate_response(api_key, formatted_messages)
 
-                 # ✅ Store Memory
+            ##################################################
+            #                                                #
+            ##################################################
+
+            # ✅ Store Memory
             memory.append({"user": user_name, "content": prompt})
             memory.append({"user": "Reginald", "content": response_text})
 
