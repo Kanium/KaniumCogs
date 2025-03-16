@@ -194,13 +194,14 @@ class ReginaldCog(PermissionsMixin, BlacklistMixin, MemoryMixin, commands.Cog):
                 'tool_choice': 'auto',
             }
             response = await client.chat.completions.create(**completion_args)
+            # Checking for function calls
+            tool_calls = response.choices[0].message.tool_calls
             # Appending response with tool calls
             messages.append({
                 'role': 'assistant',
                 'content': response.choices[0].message.content,
+                'tool_calls': tool_calls
             })
-            # Checking for function calls
-            tool_calls = response.choices[0].message.tool_calls
             if tool_calls:
                 for i_call in tool_calls:
                     # Calling for necessary functions
