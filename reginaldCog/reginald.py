@@ -196,7 +196,7 @@ class ReginaldCog(PermissionsMixin, BlacklistMixin, MemoryMixin, commands.Cog):
             completion_args = {
                 'model': model,
                 'messages': messages,
-                'max_tokens': 2048,
+                #'max_tokens': 2048,
                 'temperature': 0.7,
                 'presence_penalty': 0.5,
                 'frequency_penalty': 0.5,
@@ -236,6 +236,8 @@ class ReginaldCog(PermissionsMixin, BlacklistMixin, MemoryMixin, commands.Cog):
             else:
                 print("DEBUG: OpenAI response was empty or malformed:", response)
                 response_text = "⚠️ No response received from AI."
+
+            completion_args["messages"] = messages
 
             return response_text
 
