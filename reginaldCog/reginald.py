@@ -225,6 +225,8 @@ class ReginaldCog(PermissionsMixin, BlacklistMixin, MemoryMixin, commands.Cog):
                         'content': func_result,
                         'tool_call_id': tool_call_id,
                     })
+                
+                completion_args["messages"] = messages  
                 # Second completion required if functions has been called to interpret the result into user-friendly
                 # chat message.
                 response = await client.chat.completions.create(**completion_args)
