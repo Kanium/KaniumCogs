@@ -24,8 +24,8 @@ def get_weather_forecast(location: str, days: int = 14, dt: str = '2025-03-24') 
 class Weather:
     def __init__(self, location: str):
         self.__location = location
-        self.api_key = environ.get('WEATHER-API_KEY')
-
+        self.api_key = "f6e5cb73cae242deb2b63903250803" 
+        
     @property
     def location(self) -> str:
         return self.__location
