@@ -223,7 +223,6 @@ class ReginaldCog(PermissionsMixin, BlacklistMixin, MemoryMixin, commands.Cog):
                     messages.append({
                         'role': 'tool',
                         'content': func_result,
-                        'tool_calls': tool_calls,
                         'tool_call_id': tool_call_id,
                     })
                 # Second completion required if functions has been called to interpret the result into user-friendly
