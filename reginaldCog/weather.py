@@ -7,8 +7,8 @@ WEATHER_API_KEY = environ.get('WEATHER_API_KEY')
 URL = 'http://api.weatherapi.com/v1'
 
 
-def time_now() -> datetime:
-    return datetime.now(timezone.utc)
+def time_now() -> str:
+    return str(datetime.now(timezone.utc))
 
 
 def get_current_weather(location: str) -> str:
