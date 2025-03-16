@@ -229,9 +229,14 @@ class ReginaldCog(PermissionsMixin, BlacklistMixin, MemoryMixin, commands.Cog):
                 # chat message.
                 response = await client.chat.completions.create(**completion_args)
 
-            response_text = response.choices[0].message.content.strip()
-            if response_text.startswith("Reginald:"):
-                response_text = response_text[len("Reginald:"):].strip()
+            if response.choices and response.choices[0].message and response.choices[0].message.content:
+                response_text = response.choices[0].message.content.strip()
+                if response_text.startswith("Reginald:"):
+                    response_text = response_text[len("Reginald:"):].strip()
+            else:
+                print("DEBUG: OpenAI response was empty or malformed:", response)
+                response_text = "⚠️ No response received from AI."
+
             return response_text
 
         except OpenAIError as e:

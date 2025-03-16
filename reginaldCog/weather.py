@@ -18,9 +18,6 @@ def get_current_weather(location: str) -> str:
 
 def get_weather_forecast(location: str, days: int = 14, dt: str = '2025-03-24') -> str:
     weather = Weather(location=location)
-    response = weather.forecast(days=days, dt=dt)
-    
-    print(f"DEBUG: Forecast API Response: {response}")
     return json.dumps(weather.forecast(days=days, dt=dt))
 
 
