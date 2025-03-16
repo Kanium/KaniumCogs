@@ -57,7 +57,7 @@ TOOLS = [
                         'type': 'string',
                         'description': '''
                             The date up until to request the forecast in YYYY-MM-DD format.
-                            Check the **now** function first if you unsure which date it is.
+                            Check the **time_now** function first if you unsure which date it is.
                         '''
                     },
                 },
