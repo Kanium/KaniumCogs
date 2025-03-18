@@ -4,6 +4,7 @@ import openai
 from openai import OpenAIError
 from .weather import time_now, get_current_weather, get_weather_forecast
 from .tools_description import TOOLS
+from .debug_stuff import debug
 
 CALLABLE_FUNCTIONS = {
     # Dictionary with functions to call.
@@ -20,6 +21,7 @@ class Completion:
         self.__api_key = api_key
         self.__messages = []
 
+    @debug
     async def create_completion(self, messages: list):
         self.__messages = messages
         model = self.__model

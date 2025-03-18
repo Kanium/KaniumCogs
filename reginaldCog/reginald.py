@@ -14,6 +14,7 @@ from .blacklist import BlacklistMixin
 from .memory import MemoryMixin
 from .weather import time_now, get_current_weather, get_weather_forecast
 from .tools_description import TOOLS
+from .debug_stuff import debug
 
 
 CALLABLE_FUNCTIONS = {
@@ -189,6 +190,7 @@ class ReginaldCog(PermissionsMixin, BlacklistMixin, MemoryMixin, commands.Cog):
     
         return any(message_lower.startswith(invocation) for invocation in direct_invocation)
 
+    @debug
     async def generate_response(self, api_key, messages):
         model = await self.config.openai_model()
         try:
