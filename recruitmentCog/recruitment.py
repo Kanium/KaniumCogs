@@ -109,27 +109,17 @@ class Recruitment(commands.Cog):  # noqa
         self.cog_check_enabled = not self.cog_check_enabled
         await ctx.send(f"Cog checks are now {'enabled' if self.cog_check_enabled else 'disabled'}.")
 
-    @commands.guild_only()
+    @commands.group(name="setapplicationschannel", invoke_without_command=True)
     @checks.admin_or_permissions(manage_guild=True)
-    @commands.group(
-        name="setapplicationschannel",
-        invoke_without_command=True,
-    )
-    
-    @commands.command(name="setapplicationschannel")
-    @checks.admin_or_permissions(manage_guild=True)
-    async def set_applications_channel(
-        self, ctx: commands.Context, channel: discord.TextChannel = None
-    ) -> None:
+    async def set_applications_channel(self, ctx: commands.Context, channel: discord.TextChannel = None):
         """Set the channel where applications will be sent."""
-        # if no channel was passed, default to the one you ran it in
         channel = channel or ctx.channel
         await self.config.guild(ctx.guild).application_channel_id.set(channel.id)
         await ctx.send(f"Application channel set to {channel.mention}.")
 
     @set_applications_channel.command(name="clear")
-    async def clear_applications_channel(self, ctx: commands.Context) -> None:
-        """Clear the current application channel."""
+    async def clear_applications_channel(self, ctx: commands.Context):
+        """Clear the application channel."""
         await self.config.guild(ctx.guild).clear_raw("application_channel_id")
         await ctx.send("Application channel cleared.")
 
