@@ -155,7 +155,7 @@ class Recruitment(commands.Cog):  # noqa
             member,
             title="+++ KANIUM APPLICATION SYSTEM +++",
             description=(
-                "Ah, you wish to apply for Kanium membership."
+                "This is the process to join Kanium."
                 " Please take your time and answer thoughtfully."
             ),
             color=discord.Color.green(),
@@ -184,27 +184,70 @@ class Recruitment(commands.Cog):  # noqa
             return False
 
     async def ask_questions(self, member: discord.Member) -> Optional[Dict[str, str]]:
+        """Ask each question, let the user confirm their answer, and return the final answers."""
         answers: Dict[str, str] = {}
+
         for q in QUESTIONS_LIST:
-            try:
-                await member.send(q["prompt"])
-            except discord.Forbidden:
-                return None
-            try:
-                msg = await asyncio.wait_for(
-                    self.bot.wait_for(
-                        "message",
-                        check=lambda m: m.author == member and isinstance(m.channel, discord.DMChannel),
-                    ),
-                    timeout=300.0,
-                )
-            except asyncio.TimeoutError:
+            prompt = q["prompt"]
+
+            while True:
+                # 1) Ask the question
                 try:
-                    await member.send("You took too long. Please run the application command again.")
+                    await member.send(prompt)
                 except discord.Forbidden:
-                    pass
-                return None
-            answers[q["key"]] = sanitize_input(msg.content)
+                    return None
+
+                # 2) Wait for their reply (match by ID, not object equality)
+                try:
+                    msg = await asyncio.wait_for(
+                        self.bot.wait_for(
+                            "message",
+                            check=lambda m: (
+                                m.author.id == member.id
+                                and isinstance(m.channel, discord.DMChannel)
+                            ),
+                        ),
+                        timeout=300.0,
+                    )
+                except asyncio.TimeoutError:
+                    await member.send(
+                        "You took too long to answer. Please run the application command again."
+                    )
+                    return None
+
+                answer = sanitize_input(msg.content)
+
+                # 3) Ask for confirmation
+                try:
+                    await member.send(f"You answered:\n> {answer}\n\nIs that correct? (yes/no)")
+                except discord.Forbidden:
+                    return None
+
+                # 4) Wait for yes/no
+                try:
+                    confirm = await asyncio.wait_for(
+                        self.bot.wait_for(
+                            "message",
+                            check=lambda m: (
+                                m.author.id == member.id
+                                and isinstance(m.channel, discord.DMChannel)
+                                and m.content.lower() in ("y", "yes", "n", "no")
+                            ),
+                        ),
+                        timeout=60.0,
+                    )
+                except asyncio.TimeoutError:
+                    await member.send(
+                        "Confirmation timed out. Please start your application again."
+                    )
+                    return None
+
+                if confirm.content.lower() in ("y", "yes"):
+                    answers[q["key"]] = answer
+                    break  # move on to next question
+                else:
+                    await member.send("Okay, let's try that again.")
+
         return answers
 
     def format_application(
