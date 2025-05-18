@@ -115,10 +115,17 @@ class Recruitment(commands.Cog):  # noqa
         name="setapplicationschannel",
         invoke_without_command=True,
     )
-    async def set_applications_channel(self, ctx: commands.Context) -> None:
+    
+    @commands.command(name="setapplicationschannel")
+    @checks.admin_or_permissions(manage_guild=True)
+    async def set_applications_channel(
+        self, ctx: commands.Context, channel: discord.TextChannel = None
+    ) -> None:
         """Set the channel where applications will be sent."""
-        await self.config.guild(ctx.guild).application_channel_id.set(ctx.channel.id)
-        await ctx.send(f"Application channel set to {ctx.channel.mention}.")
+        # if no channel was passed, default to the one you ran it in
+        channel = channel or ctx.channel
+        await self.config.guild(ctx.guild).application_channel_id.set(channel.id)
+        await ctx.send(f"Application channel set to {channel.mention}.")
 
     @set_applications_channel.command(name="clear")
     async def clear_applications_channel(self, ctx: commands.Context) -> None:
