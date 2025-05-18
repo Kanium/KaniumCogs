@@ -123,7 +123,7 @@ class Recruitment(commands.Cog):  # noqa
         await self.config.guild(ctx.guild).clear_raw("application_channel_id")
         await ctx.send("Application channel cleared.")
 
-    @commands.group(name="application", invoke_without_command=True)
+    @commands.group(name="application", aliases=["joinus", "joinkanium", "applyformembership"], invoke_without_command=True)
     async def application(self, ctx: commands.Context, *, text: Optional[str] = None) -> None:
         """Start an application process."""
         # Direct free-text application (optional)
