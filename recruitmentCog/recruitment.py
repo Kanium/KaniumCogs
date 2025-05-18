@@ -51,11 +51,14 @@ QUESTIONS_LIST = [
 
 def sanitize_input(input_text: str) -> str:
     """Sanitize input to remove mentions, links, and unwanted special characters."""
+    # Remove user/role/channel mentions
     text = re.sub(r'<@!?(?:&)?\d+>', '', input_text)
+    # Remove URLs
     text = re.sub(r'http\S+', '', text)
-    # Allow unicode letters and common punctuation
-    text = re.sub(r'[^\w\s\p{L}\.,\?!`~@#$%^&*()_+=-]', '', text)
+    # Keep only word characters (including Unicode letters/digits), whitespace, and your chosen punctuation
+    text = re.sub(r"[^\w\s\.,\?!`~@#$%^&*()_+=-]", "", text)
     return text
+
 
 
 class Recruitment(commands.Cog):  # noqa
