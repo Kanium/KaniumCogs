@@ -184,20 +184,23 @@ class Recruitment(commands.Cog):  # noqa
             return False
 
     async def ask_questions(self, member: discord.Member) -> Optional[Dict[str, str]]:
-        """Ask each question, let the user confirm their answer, and return the final answers."""
+        """
+        Ask each question, let the user confirm their answer,
+        and return the final answers (or None on abort).
+        """
         answers: Dict[str, str] = {}
 
         for q in QUESTIONS_LIST:
             prompt = q["prompt"]
 
             while True:
-                # 1) Ask the question
+                # 1) send the question
                 try:
                     await member.send(prompt)
                 except discord.Forbidden:
-                    return None
+                    return None  # can't DM
 
-                # 2) Wait for their reply (match by ID, not object equality)
+                # 2) wait for their reply (match on ID, not object)
                 try:
                     msg = await asyncio.wait_for(
                         self.bot.wait_for(
@@ -205,25 +208,25 @@ class Recruitment(commands.Cog):  # noqa
                             check=lambda m: (
                                 m.author.id == member.id
                                 and isinstance(m.channel, discord.DMChannel)
-                            ),
+                            )
                         ),
                         timeout=300.0,
                     )
                 except asyncio.TimeoutError:
                     await member.send(
-                        "You took too long to answer. Please run the application command again."
+                        "You took too long to answer. Please restart the application with `!application`."
                     )
                     return None
 
                 answer = sanitize_input(msg.content)
 
-                # 3) Ask for confirmation
+                # 3) echo back for confirmation
                 try:
                     await member.send(f"You answered:\n> {answer}\n\nIs that correct? (yes/no)")
                 except discord.Forbidden:
                     return None
 
-                # 4) Wait for yes/no
+                # 4) wait for a yes/no
                 try:
                     confirm = await asyncio.wait_for(
                         self.bot.wait_for(
@@ -232,23 +235,26 @@ class Recruitment(commands.Cog):  # noqa
                                 m.author.id == member.id
                                 and isinstance(m.channel, discord.DMChannel)
                                 and m.content.lower() in ("y", "yes", "n", "no")
-                            ),
+                            )
                         ),
                         timeout=60.0,
                     )
                 except asyncio.TimeoutError:
                     await member.send(
-                        "Confirmation timed out. Please start your application again."
+                        "Confirmation timed out. Please restart the application with `!application`."
                     )
                     return None
 
                 if confirm.content.lower() in ("y", "yes"):
+                    # user confirmed, save and move on
                     answers[q["key"]] = answer
-                    break  # move on to next question
+                    break
                 else:
+                    # user said “no” → repeat this question
                     await member.send("Okay, let's try that again.")
 
         return answers
+
 
     def format_application(
         self, answers: Dict[str, str], member: discord.Member
