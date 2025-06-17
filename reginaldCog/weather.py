@@ -21,8 +21,9 @@ def get_current_weather(location: str) -> str:
 
 @debug
 def get_weather_forecast(location: str, days: int = None) -> str:
-    days = max(1, days + 1)
-    days = min(14, days + 1)
+    days += 1
+    days = max(1, days)
+    days = min(14, days)
     weather = Weather(location=location)
     return json.dumps(weather.forecast(days=days))
 
