@@ -62,7 +62,7 @@ TOOLS = [
                         '''
                     },
                     'days': {
-                        'type': 'int',
+                        'type': 'integer',
                         'description': '''
                             Number of days of forecast between 0 and 13, where 0 is only today, 1 up to tomorrow, etc.
                         '''
