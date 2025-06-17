@@ -85,7 +85,7 @@ class Completion:
 
 if __name__ == '__main__':
     async def main():
-        test_message = 'Hello! Would you tell me a weather forecast in Aqtobe for 18th of June?'
+        test_message = input('Your input: ')
         completion = Completion(model='gpt-4.1-mini', api_key=environ.get('OPENAI_API_KEY'))
         completion.append_message(role='user', content=test_message)
         result = await completion.create_completion()
