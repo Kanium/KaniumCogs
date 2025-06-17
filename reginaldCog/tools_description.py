@@ -1,11 +1,17 @@
 TOOLS = [
+    # time_now
     {
         'type': 'function',
         'function': {
             'name': 'time_now',
-            'description': 'Get current date and time in UTC timezone.',
+            'description': '''
+                Get current date and time in UTC timezone.
+                Use this before get_weather_forecast function if user gave you date of forecast
+                instead of number of days.
+            ''',
         }
     },
+    # get_current_weather
     {
         'type': 'function',
         'function': {
@@ -32,6 +38,7 @@ TOOLS = [
             'strict': True
         }
     },
+    # get_weather_forecast
     {
         'type': 'function',
         'function': {
@@ -41,7 +48,8 @@ TOOLS = [
                 forecast and weather alert as json. The data is returned as a Forecast Object.
                 Forecast object contains astronomy data, day weather forecast and hourly interval weather information
                 for a given city.
-                With a free weather API subscription, only up to three days of forecast can be requested.
+                Number of days could be less, depending on the API subscription plan.
+                With a free plan only up to three days of forecast would be returned.
             ''',
             'parameters': {
                 'type': 'object',
@@ -53,16 +61,15 @@ TOOLS = [
                             e.g: "Copenhagen", or "Copenhagen, Louisiana, US", if needed specifying.
                         '''
                     },
-                    'dt': {
-                        'type': 'string',
+                    'days': {
+                        'type': 'int',
                         'description': '''
-                            The date up until to request the forecast in YYYY-MM-DD format.
-                            Check the **time_now** function first if you unsure which date it is.
+                            Number of days of forecast between 0 and 13, where 0 is only today, 1 up to tomorrow, etc.
                         '''
                     },
                 },
                 'required': [
-                    'location', 'dt'
+                    'location', 'days'
                 ],
                 'additionalProperties': False
             },
