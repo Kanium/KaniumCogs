@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from os import environ
 import requests
 import json
-from .debug_stuff import debug
+from debug_stuff import debug
 
 #WEATHER_API_KEY = environ.get('WEATHER_API_KEY')
 URL = 'http://api.weatherapi.com/v1'
@@ -20,9 +20,11 @@ def get_current_weather(location: str) -> str:
 
 
 @debug
-def get_weather_forecast(location: str, days: int = 14, dt: str = '2025-03-24') -> str:
+def get_weather_forecast(location: str, days: int = None) -> str:
+    days = max(1, days + 1)
+    days = min(14, days + 1)
     weather = Weather(location=location)
-    return json.dumps(weather.forecast(days=days, dt=dt))
+    return json.dumps(weather.forecast(days=days))
 
 
 class Weather:
@@ -49,18 +51,17 @@ class Weather:
         return self.make_request(method=method, params=params)
 
     @debug
-    def forecast(self, days: int = 14, dt: str = '2025-03-24'):
+    def forecast(self, days: int = 14):
         method = '/forecast.json'
         params = {
             'key': self.api_key,
             'q': self.location,
             'days': days,
-            'dt': dt,
         }
         return self.make_request(method=method, params=params)
 
 
 if __name__ == '__main__':
     test_weather = Weather('Aqtobe')
-    result = json.dumps(test_weather.forecast(days=14, dt='2025-03-24'), indent=2)
+    result = json.dumps(test_weather.forecast(days=13), indent=2)
     print(result)
