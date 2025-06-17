@@ -1,10 +1,12 @@
 import random
 import json
+import asyncio
+from os import environ
 import openai
 from openai import OpenAIError
-from .weather import time_now, get_current_weather, get_weather_forecast
-from .tools_description import TOOLS
-from .debug_stuff import debug
+from weather import time_now, get_current_weather, get_weather_forecast
+from tools_description import TOOLS
+from debug_stuff import debug
 
 CALLABLE_FUNCTIONS = {
     # Dictionary with functions to call.
@@ -22,14 +24,13 @@ class Completion:
         self.__messages = []
 
     @debug
-    async def create_completion(self, messages: list):
-        self.__messages = messages
+    async def create_completion(self):
         model = self.__model
         try:
             client = openai.AsyncClient(api_key=self.__api_key)
             completion_kwargs = {
                 "model": model,
-                "messages": messages,
+                "messages": self.__messages,
                 "max_tokens": 4096,
                 "temperature": 0.7,
                 "presence_penalty": 0.5,
@@ -80,4 +81,15 @@ class Completion:
     def function_manager(self, func_name: str, func_kwargs: dict, tool_call_id: str):
         result = CALLABLE_FUNCTIONS[func_name](**func_kwargs)
         self.append_message(role="tool", content=result, tool_call_id=tool_call_id)
+
+
+if __name__ == '__main__':
+    async def main():
+        test_message = 'Hello! Would you tell me a weather forecast in Aqtobe for 18th of June?'
+        completion = Completion(model='gpt-4.1-mini', api_key=environ.get('OPENAI_API_KEY'))
+        completion.append_message(role='user', content=test_message)
+        result = await completion.create_completion()
+        print(result)
+
+    asyncio.run(main())
 
