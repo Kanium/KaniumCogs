@@ -48,7 +48,7 @@ class Completion:
                     func_args = json.loads(i_call.function.arguments)
                     tool_call_id = i_call.id
                     self.function_manager(func_name, func_args, tool_call_id)
-                return self.create_completion(messages=self.__messages)
+                return await self.create_completion()
             return response_content
         except OpenAIError as e:
             return self.get_error_message(error_message=str(e), error_type="OpenAIError")
